@@ -1,0 +1,271 @@
+# Features and compatibility / 功能与兼容矩阵
+
+This document describes AgentKib's current product surfaces and support boundaries. For installation and the product overview, see the [README](../README.md).
+
+本文档描述 AgentKib 当前的产品界面与支持边界。安装方式和产品简介见[中文 README](../README.zh-CN.md)。
+
+Native acceptance is tied to each QA report's revision and Agent version. Current TypeScript backend automation and candidate-package checks are recorded separately in [TypeScript stability QA](../qa/typescript-stability-2026-10-07.md); older Rust evidence is not reused as migration acceptance.
+
+原生验收只适用于各 QA 记录的源码与 Agent 版本。当前 TypeScript 后端自动化和候选包检查单独记入[本轮稳定性 QA](../qa/typescript-stability-2026-10-07.md)，不将旧 Rust 证据当作迁移后的验收结果。
+
+## English
+
+### Across your machine
+
+| Area | What it provides |
+| --- | --- |
+| Today | Prioritized local actions and recent workspace activity |
+| Workspaces | Discovered and manually added projects, with coverage and warnings |
+| Asset catalog | A machine-wide view of Instructions, Skills, MCP, memory, and other agent assets |
+| Skill Hub | A local Skill library, existing-installation inspection and batch copy import, reviewed OpenAI/GitHub sources, GitHub version selection, personal/project deployment, updates, rollback, withdrawal, and recoverable library removal |
+| Agents | Installation state, configuration homes, capabilities, and discovered assets |
+| Quota | Locally available quota windows, balances, and reset times |
+| Insights | Token, session, Git activity, heatmaps, and achievements derived locally |
+| Settings | Discovery roots, tool updates, integrations, privacy controls, and diagnostics |
+
+Quota diagnostics show the last attempt, last success, automatic-refresh setting and redacted provider failures. Verified Codex/Claude cost-scan timeouts can retain successfully collected quota windows with a partial-data warning. A complete failure retains the last-good snapshot as stale; expired reset times request a refresh instead of showing a future countdown.
+
+### Inside a workspace
+
+| Area | What it provides |
+| --- | --- |
+| Overview | Agent coverage, shared asset state, and workspace signals |
+| Continue work | Local session browsing and reviewed cross-agent handoff |
+| Assets | Project-scoped Instructions, Skills, MCP, memory, and native configuration |
+| Git | Read-only repository status and activity |
+| Context | Effective load order, scope, overrides, and conflicts for a selected agent and directory |
+| Doctor | Actionable diagnostics across supported agents |
+| Changes | Pending and historical ChangeSets with complete diffs |
+
+Generated changes follow a review-first flow:
+
+```text
+Discover local workspaces and agent state
+                  ↓
+Preview effective context and diagnostics
+                  ↓
+Generate a ChangeSet and complete diff
+                  ↓
+Write only after explicit approval
+```
+
+Browsing, previewing, and diagnostics do not create a manifest or modify agent configuration. A workspace needs no pre-existing `.agentkib/manifest.yaml`; AgentKib adds one to the reviewed ChangeSet only when shared assets are first saved.
+
+### Session history
+
+- Desktop and Web offer opt-in keyword search over the current host's user/assistant text and readable tool input/output, with workspace, agent, text/tool and archive filters. Search snippets lead to bounded source passages; selected quotations enter the current draft without changing its target and are sent only on explicit user action. Other paired hosts remain title-search only. The local owner controls enable/clear/rebuild, and the global session-index switch also clears the derived body cache.
+- Content adapters cover the eight agents below. Cursor tool records are unsupported; attachments and hidden reasoning are excluded. Damaged, oversized or unsupported source records are marked partial rather than presented as complete. Source changes invalidate old locations and unsent references; Web reads and sends retain separate source/target authorization. See [source matrix, limits and cleanup](SESSION-CONTENT-SEARCH.md). This feature's evidence is TypeScript automation; Windows/Linux native acceptance and model calls were not performed for this round, and historical Rust evidence is not reused.
+
+- The directory shows interactive conversations and user-created forks. Auxiliary/subagent records and ordinary Codex `exec` execution records are retained in the index but excluded from directories, search, recent conversations, counts, and continuation choices on desktop and Remote. There is no display toggle; old links return to the directory with an explanation. Unknown sources and ordinary untitled conversations remain visible.
+- AgentKib-managed conversations keep their ledger-backed directory entry, with duplicate native index aliases removed. The paired desktop Remote directory verifies existing managed ownership without creating or migrating its ledger, and preserves the native index ID for history reads. Legacy Codex history imports remain visible only when their complete AgentKib import header matches the indexed session identity and workspace; this recognition grants no control permissions. The TypeScript backend advances classification revision to 3 and invalidates old Codex workspace and conversation-collection caches once; the first directory read recalculates Codex origins before exposing cached entries, without changing native histories. An incomplete upgrade scan shows records that were successfully reclassified, while unclassified cached records remain stored and hidden until they can be read. Once all cached records have been reclassified, ordinary reads stop repeating the upgrade scan even if a source remains unavailable. Clearing the index also clears pending classification markers, while retaining the classification revision. Both the host and Remote frontend must be updated for this directory policy to take effect.
+- Native alias checks in local and paired directories require a complete ledger within the 20,000-record read limit and check ownership before filtering workspaces. Larger ledgers retain the native execution classification and skip alias mapping and deduplication; local managed entries keep their ledger identities, and ordinary conversations remain readable. If paired-directory ownership projection fails, the indexed records remain readable with their original classifications, and Runtime emits a diagnostic without ledger contents or paths; control ledger checks still fail on errors.
+- Forks keep their own identity and title, with a small fork indicator and source information. Spawned-parent and fork-source relationships are independent; identical titles are never merged. Successful source refreshes reconcile archived/deleted records, while unavailable or unsupported sources retain the last cached snapshot.
+- History opens with the latest 50 records (messages and tool summaries), displayed chronologically. Load earlier records on demand. Normal pagination does not show an incomplete-turn warning; actual read errors and truncated content remain visible.
+- Desktop and Remote display the latest native context report independently of settings support. Compaction blocks sending, steering, settings, goals, and ownership transfer until the native phase ends; unconfirmed post-compaction usage does not extend the send lock. See [conversation state and report sources](CONVERSATIONS.md).
+- Codex and Claude Code JSONL histories are read from the tail with bounded scanning and memory, rather than loading the entire transcript before pagination. Antigravity ACP histories are replayed through the official ACP server with bounded pages and update budgets. OpenCode is read through its bounded export command; OpenClaw, Hermes, and Grok Build use their verified local history sources. Page byte limits may return fewer than 50 records; an empty scan window can still offer earlier records.
+- Damaged or oversized log records produce a warning. Very distant message/tool associations or ambiguous legacy metadata may be shown conservatively with a warning instead of requiring a full-file scan.
+- History pagination is read-only. All eight listed agents have source adapters with per-session validation; Cursor uses verified CLI stores or explicitly connected macOS IDE profiles, and OpenClaw supports schema-23 SQLite plus legacy JSONL when no authoritative SQLite store exists. Compressed or incomplete histories that cannot preserve required text are refused. OpenCode 1.18.32, Hermes 0.21.5, and offline OpenClaw 2026.9.6 native imports prepare a reviewed payload, reconcile durable operation records, and verify target content before launch. Historical QA records offline storage, native UI, restart, and representative text-reply results for specific directions. These do not cover all source/target pairs, rich content, or the migrated TypeScript backend. See [direction/version compatibility](SESSION-INTEROPERABILITY.md).
+
+### MCP Hub and client connections
+
+- HTTP MCP OAuth credentials are bound to the authorization server that issued them. After the MCP SDK security update to 1.31.0, saved credentials without this binding require a new sign-in; authorize the service again from its MCP entry.
+- The desktop MCP page separates service collection/editing, batch Agent connection setup, and per-Agent tool rules. It accepts reviewed native/pasted formats (including `mcpServers`) as disabled definitions, without starting services or copying native credentials. See [MCP management](MCP-MANAGEMENT.md).
+- “Connect an Agent to the Hub” lets you choose a registered workspace and one of the eight writable agents, inspect the complete local Hub URL and native configuration path, copy the URL or configuration, or review a connection-only ChangeSet before writing it. A workspace does not need an existing manifest.
+- New connections use the workspace's unique registered ID. Legacy manifest URLs remain valid when they identify one physical workspace; ambiguous aliases are rejected. Rewriting a connection with its registered ID restores ordinary Hub access. Continuation archives keep their existing manifest namespace, so shared or conflicting ownership still blocks archive reads, long-history handoffs, and operation recovery; changing the URL alone does not resolve that ambiguity. The Hub rechecks ownership on every archive read.
+- Codex and Grok Build use TOML; Claude Code, Cursor, OpenCode, Antigravity and OpenClaw use their native JSON structures; Hermes uses YAML. Existing OpenCode configuration selection and JSONC/JSON5 compatibility are preserved. OpenClaw and Hermes write to Agent Home and require separate approval; their connection points to the selected workspace. OpenClaw honors its effective Home, profile, state directory, and config-path overrides; Hermes uses `HERMES_HOME` and the selected `active_profile` (or a directly selected profile Home). Planning and applying share the same path resolution, and a changed profile or config target requires a new plan.
+- A connection-only ChangeSet preserves other servers and client settings. It refuses conflicting same-name entries and unsafe paths, uses the normal hash/backup protections, and updates an existing tracked configuration hash when necessary. It does not generate Instructions or Skills.
+- After copying or writing, reload the target agent's MCP configuration and confirm that its tools are visible. AgentKib and the client must run on the same machine for the displayed loopback URL to work. Enabled global services are defaults; workspace services can override them, and each service's allowed-agent list controls publication.
+- “Verify Hub” performs an HTTP MCP handshake and reads the tool catalog without calling tools or probing upstream services. It distinguishes AgentKib built-in tools from external tools, whose directory comes from the most recent service probe. “Configuration written,” “Hub reachable,” and a successful service probe do not confirm that another agent has loaded the connection. An empty external directory suggests checking enabled services, allowed agents, and service probing.
+
+### Skill Hub
+
+- A Skill is represented as one directory-level package rooted at `SKILL.md`; supporting files remain inside that package.
+- The library lives under the AgentKib Home and does not automatically distribute or enable Skills in an Agent Home or workspace.
+- Discovery supports the reviewed OpenAI catalog and public GitHub repository, tree, or `SKILL.md` URLs.
+- Installation previews an immutable commit, package metadata, file list, executable resources, compatibility, license, and content changes without running package code.
+- GitHub packages use API-downloaded snapshots and support selecting a tag, branch or commit during installation or later. Ordinary updates follow the recorded reference; rollback restores the previous contents and reference together. Only one previous version is retained.
+- Managed Skills support update checks, local-drift warnings, one-version rollback, recoverable removal, and restore. Unmanaged local packages remain inspectable but cannot be updated online.
+- Local-agent batch import supports filtering, select all, one reviewed batch and per-item results. Shared physical sources are merged; the same source and content already in the library are skipped, while different sources and changed snapshots remain independent. Native visibility restrictions do not prevent copying readable packages or change native settings.
+- Skill management adds existing-installation inspection and copy import, bounded content previews, and reviewed personal/project deployments for all eight writable agents. Deployments have independent update, rollback and withdrawal; native visibility and shared-directory effects are reported separately from file installation. See [Skill management](SKILLS.md).
+- Ownership checks cover ancestor project records across library homes and delayed Home-only ChangeSets. OpenCode's Claude compatibility visibility respects its disable flags and keeps its default source independent of Claude Home overrides.
+- OpenCode inspection includes native configuration directories and effective `skills.paths`, with project-disable settings and independent sources evaluated together. Deployment lists refresh current native readers without rewriting ownership receipts.
+- Local copy import preserves Skills that use their directory name instead of an explicit `name`. OpenCode compatibility inspection includes hidden, nested and ancestor sources without adding write targets.
+
+Skill operations run sequentially in a dedicated Worker, with one active request and at most eight waiting requests. Network work has a 180-second total deadline from admission; a full queue fails immediately. Started local writes finish or roll back before shutdown completes. Slow catalog and file work does not occupy the Runtime request loop.
+
+### Tools and updates
+
+- Managed tools: Codex, Claude Code, Cursor, OpenCode, OpenClaw, Hermes, and Grok Build. Antigravity CLI is detected and links to official installation documentation; its remote-script installer is not executed automatically. DeepSeek Harness is not exposed because it has no supported stable tool-management channel.
+- Each installation reports its executable and resolved paths, version, runnable state, installation source, runtime environment, matching manager, and whether it is the PATH default.
+- Version comparison follows the detected installation channel instead of treating a GitHub or npm release as universal.
+- Automatic actions are bound to the detected installation and a pinned target version. Supported executable actions use verified npm, pnpm, bun, or Volta arguments without invoking a shell or requesting elevation. Homebrew and official updater channels that cannot pin an exact target fall back to a command for the user to review and run.
+- Multiple physical installations, unverified sources, unavailable managers, privileged operations, remote scripts, and unsupported channels block automatic execution and fall back to an official command or documentation.
+- An operation succeeds only after the target installation is re-detected, runnable, and verified at the expected version.
+
+### Agent support
+
+| Agent | Discovery and inventory | Context diagnostics and sync | Session history | Handoff source | Tool management |
+| --- | --- | --- | --- | --- | --- |
+| Codex | Yes | Yes | Yes | Yes | Yes |
+| Claude Code | Yes | Yes | Yes | Yes | Yes |
+| Antigravity | Yes | Yes | ACP sessions | ACP source only | Detect/docs |
+| Cursor           | Yes                     | Yes                          | Verified CLI stores / connected macOS IDE profiles | CLI / IDE, per-session check | Yes             |
+| OpenCode | Yes | Yes | Yes | Yes | Yes |
+| OpenClaw | Yes | Yes | Read-only | Per-session check | Yes |
+| Hermes | Yes | Yes | Read-only | Per-session check | Yes |
+| Grok Build | Yes | Yes | Read-only | Per-session check | Yes |
+| DeepSeek Harness | Beta, read-only | Diagnostics only | — | — | — |
+
+AgentKib distinguishes an installed app or CLI from local data left behind after uninstalling it. Agent Home writes require separate approval. Antigravity ACP sessions are not claimed to be the complete Desktop/IDE or CLI history store, and current stable interfaces cannot import foreign history into an Antigravity-native session. DeepSeek Harness remains a read-only Beta target and is never written to, configured for MCP, or included in tool management.
+
+### Web access and continuation
+
+- Pairing grants read access first. Sending and approvals are separate per-browser permissions and also require the host control switch.
+- Claude Code desktop/Web control shares one execution service on macOS CLI versions at least `2.1.263`, with foreground Bash support at least `2.1.285`: prepare new sessions without a model call, or explicitly adopt an existing UUID after stopping its terminal. Native identities, protocol shapes, and receipts remain validated; accepting a newer version does not imply real-device acceptance. LAN uploads remain disabled; Windows/Linux control remains unavailable. See [Claude usage](CLAUDE-WEB.md) and [historical native QA](../qa/claude-managed-2026-09-30.md) and [current TypeScript QA](../qa/typescript-stability-2026-10-07.md).
+- Codex Web control follows an already-open official owner session, with minimum Desktop versions `26.917.62051` for base control and `26.924.22138` for settings. Unknown or malformed versions, unsupported platforms, missing owners, and incompatible native protocols remain read-only; satisfying the version threshold does not replace native validation or acceptance testing.
+- Antigravity Web control manages only sessions returned by the official ACP server. It negotiates ACP v1 capabilities, checks the indexed session and workspace again, and requires exact revision, turn, request, and offered permission option matches.
+- A request receipt does not mean a turn or approval completed. Disconnects and uncertain outcomes are never retried automatically.
+
+### Platform status
+
+| Platform | Status |
+| --- | --- |
+| macOS 13.3+ (Apple Silicon / Intel) | Primary development and acceptance platform; releases are signed and notarized |
+| Windows 11 x64 | Release workflow builds and smoke-tests NSIS; installers are not yet Authenticode-signed |
+| Ubuntu 22.04 x64 | Core CI platform; releases include verified `.deb` and AppImage packages |
+| Fedora x64 | Platform checks run on pull requests; releases include verified `.rpm` packages |
+| Windows ARM64 / Linux ARM64 | Preview packages with limited native regression coverage |
+
+Platform setup and known limitations are documented in the [Windows guide](WINDOWS.md), [upgrade guide](UPGRADING.md), and [release guide](RELEASE.md).
+
+## 简体中文
+
+### 全局视图
+
+| 区域 | 提供的能力 |
+| --- | --- |
+| 今日任务 | 排好优先级的本地行动项和近期工作区活动 |
+| 工作区 | 自动发现或手动添加的项目，以及覆盖情况和警告 |
+| 全局资产目录 | 跨工作区查看 Instructions、Skills、MCP、记忆和其他 Agent 资产 |
+| Skill Hub | 本地 Skill 资源库、已有安装查看与批量复制入库、OpenAI 精选及 GitHub 导入与版本选择、个人/项目部署、更新、回滚、撤销部署和资源库可恢复移除 |
+| Agent | 安装状态、配置 Home、能力和已发现资产 |
+| 额度 | 本机可读取的额度窗口、余额和重置时间 |
+| 洞察 | 本地派生的 Token、会话、Git 活动、热力图和成就 |
+| 设置 | 发现目录、工具更新、集成、隐私控制和诊断 |
+
+额度诊断显示最近尝试、最近成功、自动刷新设置及脱敏后的 Provider 错误。已验证的 Codex/Claude 费用统计超时不会丢弃成功取得的额度窗口，同时保留部分数据失败提示。完全失败时保留并标记上次成功快照；已过期的重置时间提示刷新，不再显示未来倒计时。
+
+### 工作区内
+
+| 区域 | 提供的能力 |
+| --- | --- |
+| 概览 | Agent 覆盖、共享资产状态和工作区信号 |
+| 继续工作 | 本地会话浏览和经过审查的跨 Agent 交接 |
+| 资产 | 工作区范围的 Instructions、Skills、MCP、记忆和原生配置 |
+| Git | 只读的仓库状态和活动 |
+| 上下文 | 指定 Agent 与目录的有效加载顺序、作用域、覆盖和冲突 |
+| 诊断 | 跨受支持 Agent 的可执行诊断 |
+| 变更 | 待处理和历史 ChangeSet，以及完整 Diff |
+
+生成的变更遵循先审查、后写入的流程：
+
+```text
+发现本机工作区与 Agent 状态
+              ↓
+预览有效上下文并进行诊断
+              ↓
+生成 ChangeSet 和完整 Diff
+              ↓
+只有明确确认后才写入
+```
+
+浏览、预览和诊断不会创建 manifest，也不会修改 Agent 配置。工作区不需要预先存在 `.agentkib/manifest.yaml`；只有首次保存共享资产时，AgentKib 才会把它加入待审查的 ChangeSet。
+
+### 会话历史
+
+- 桌面与 Web 支持默认关闭的本机正文关键字搜索，覆盖用户/助手文字与可读取的工具输入输出，可按工作区、Agent、正文/工具及归档状态筛选。命中片段可定位并选段引用到当前草稿，保持目标会话不变，只有用户明确发送才带入引用；其他配对主机仍只搜索标题。启用、清理、重建限本机所有者操作，会话索引总开关也会清除派生正文缓存。
+- 下表八个 Agent 均有正文来源适配器；Cursor 工具记录尚未支持，附件正文与隐藏推理不在范围内。超限、损坏或不支持的记录明确显示部分覆盖；原文变化会使旧位置及未发送引用失效，Web 来源读取与目标发送分别授权。详见[来源矩阵、上限与清理行为](SESSION-CONTENT-SEARCH.md)。本轮仅有 TypeScript 自动化证据，未执行 Windows/Linux 本机验收或模型调用，不复用历史 Rust 证据。
+
+- 本机 Codex、Claude Code 与 Antigravity 支持在会话页原地聊天，共用 Remote 的完整操作组件和原生事件流；具体控制按平台、版本、归属及授权开放。附件、设置、审批、队列、目标与产物入口见 [实时会话](CONVERSATIONS.md)。打开会话不自动接管任务。
+
+- 目录显示用户对话和用户创建的分叉。辅助/子代理及普通 Codex `exec` 执行记录保留在索引中，但从桌面与 Remote 的目录、搜索、最近会话、计数和续接来源中排除，不提供显示开关；旧链接返回目录并说明原因。无法识别的来源和正常未命名对话仍保留显示。
+- AgentKib 托管会话沿用持久归属记录展示，并去除重复的原生索引别名。桌面配对 Remote 的目录只读校验已有托管归属，不创建或迁移归属账本，保留用于读取历史的原生索引 ID。旧 Codex 历史导入仅在完整导入标记、会话身份及工作目录均匹配时保留显示，此识别不授予控制权限。TypeScript 后端将分类版本更新为 3，一次性使旧 Codex 工作区及会话集合缓存失效，首次目录读取先重新分类再展示缓存，不改写原生历史；扫描不完整时，已重新分类的记录继续显示，尚未重算的旧记录保留在索引中，待来源可读后再显示。旧缓存全部重新分类后，即使某个来源仍不可用，普通读取也不再重复升级扫描；清空索引同时清除待分类标记，保留分类版本。主机和 Remote 前端均需更新才能完整生效。
+- 本机与配对目录的原生别名校验要求账本在 20,000 条读取上限内保持完整，并先判断归属唯一性再过滤工作区；超限时保留原生执行记录分类，跳过别名映射及去重。本机托管条目继续使用账本身份，普通对话仍可读取。配对目录的归属投影失败时，索引记录保持原分类和可读性，Runtime 输出不含账本内容或路径的诊断；控制账本校验仍按原规则拒绝错误。
+- 分叉保留独立身份和原标题，通过小型分叉标识及来源信息区分；子代理父关系与历史分叉关系独立，不按同名合并。成功刷新会同步归档、删除状态；来源不可用或结构不支持时保留上次缓存快照。
+- 默认加载最新 50 条记录（消息和工具摘要），按时间正序展示；更早记录按需加载。正常分页不提示轮次不完整，真实读取错误与内容截断仍显示。
+- 桌面与 Remote 独立于设置能力显示最近原生上下文报告。压缩期间阻止发送、steer、设置、目标修改与归属转移，直到原生阶段结束；压缩后用量未确认不会延长发送锁。详见[实时状态与报告来源](CONVERSATIONS.md)。
+- Codex 与 Claude Code 的 JSONL 历史从文件尾部开始有界读取，不再先读取完整文件才分页。Antigravity ACP 历史通过官方 ACP server 有界回放。OpenCode 通过有界导出命令读取；OpenClaw、Hermes 和 Grok Build 使用各自经过校验的本机历史来源。单页体积限制可能使结果少于 50 条；本次扫描窗口为空时，仍可能继续加载更早记录。
+- 损坏或超大的日志记录会显示提示；距离过远的消息/工具关联，以及无法明确判断的旧格式元数据，会保守展示并提示，而非要求扫描完整文件。
+- 历史分页只读，不修改原记录。表中八个 Agent 均有来源适配器，能否交接取决于具体会话解析；Cursor 使用已验证 CLI 格式或显式连接的 macOS IDE profile，OpenClaw 支持 schema-23 SQLite，并在不存在权威 SQLite 存储时兼容旧 JSONL。无法保留必要正文的压缩或不完整历史会被拒绝。OpenCode 1.18.32、Hermes 0.21.5 与离线 OpenClaw 2026.9.6 新增原生导入：审查临时载荷、保存操作记录、核对目标全文后才启动。历史 QA 分别记录了特定方向的离线存储、原生界面、重启与代表性文本回复结果，不代表所有来源×目标、富内容或迁移后的 TypeScript 后端均已验收，详见[方向与版本兼容矩阵](SESSION-INTEROPERABILITY.md)。
+
+### MCP Hub 与客户端接入
+
+- HTTP MCP 的 OAuth 凭据会绑定签发它们的授权服务器。升级到 MCP SDK 1.31.0 安全修复版本后，缺少此绑定的旧凭据需要重新登录；请从对应 MCP 服务条目重新授权。
+- 桌面 MCP 页区分服务收录／编辑、Agent 批量接入和按 Agent 分配具体工具。已验证原生／粘贴格式（包括 `mcpServers`）收录为停用定义，不启动服务、不复制原生凭据。参见 [MCP 管理说明](MCP-MANAGEMENT.md)。
+- “连接 Agent 到 Hub”可选择已注册工作区和八个可写 Agent 之一，查看完整本机 Hub URL 与原生配置路径、复制地址或配置，或先审查仅包含连接变更的 ChangeSet 再写入。工作区无需已有 manifest。
+- 新连接使用工作区的唯一注册 ID。旧 manifest 地址只有在能唯一定位物理工作区时才兼容；存在歧义时拒绝。改用注册 ID 重写连接可恢复普通 Hub 访问。续接归档仍沿用旧 manifest namespace，共享或冲突归属会阻止归档读取、长历史交接和操作恢复；只改 URL 不能解决归档歧义。Hub 每次读取归档都会重新核对归属。
+- Codex、Grok Build 使用 TOML；Claude Code、Cursor、OpenCode、Antigravity、OpenClaw 使用各自原生 JSON 结构；Hermes 使用 YAML。沿用已有 OpenCode 配置选择规则与 JSONC/JSON5 兼容行为。OpenClaw、Hermes 写入 Agent Home，需单独确认，连接会指向所选工作区。OpenClaw 遵循有效的 Home、profile、state directory 和 config-path 覆盖配置；Hermes 使用 `HERMES_HOME` 与所选 `active_profile`，也支持直接选择 profile Home。规划与应用共用路径解析，profile 或配置目标变化后须重新规划。
+- 接入 ChangeSet 保留其他服务及客户端设置，拒绝同名冲突和不安全路径，并复用哈希检查与备份保护；必要时同步已跟踪配置的哈希，不生成 Instructions 或 Skills。
+- 复制或写入后，在目标 Agent 重新加载 MCP 配置并确认工具可见。页面显示的 loopback URL 要求 AgentKib 与客户端运行在同一台机器。已启用的全局服务作为默认配置，工作区服务可覆盖它们，各服务的允许 Agent 范围控制工具发布。
+- “验证 Hub”通过 HTTP 完成 MCP 握手并读取工具目录，不调用工具、不探测上游。结果区分 AgentKib 内置工具与外部工具，外部目录来自最近一次服务探测。“配置已写入”“Hub 可达”及服务探测成功均不代表其他 Agent 已加载连接。外部目录为空时，可检查服务启用状态、允许 Agent 范围并执行服务探测。
+
+### Skill Hub
+
+- 一个 Skill 以 `SKILL.md` 所在目录作为包级入口，支持文件保留在包内，不会成为重复的顶层资产。
+- 资源库位于 AgentKib Home，不会自动向 Agent Home 或工作区分发或启用 Skill。
+- 发现支持 OpenAI 精选目录，以及公开 GitHub 仓库、Tree 目录或 `SKILL.md` URL。
+- 安装前会预览固定到不可变 Commit 的包元数据、文件列表、可执行资源、兼容性、许可证和内容变化，不执行包内代码。
+- GitHub 包通过 API 下载快照，安装时及安装后均可选择 tag、分支或 commit。普通更新沿用已记录的引用，回滚同时恢复上一版本的内容和引用；只保留上一版本。
+- 受管 Skill 支持更新检查、本地漂移提醒、上一版本回滚、可恢复移除与恢复；本地未托管包可以检查，但不能在线更新。
+- 从本机 Agent 批量导入支持筛选、全选、统一预览及逐项结果。同一物理来源合并，已入库且来源与内容相同的包跳过，不同来源及变化快照分别保留。原生可见性限制不阻止复制可读包，也不会因复制改变原生设置。
+- Skill 管理支持查看并复制已有安装、限长内容预览，以及八种可写 Agent 的个人/项目部署。部署可独立更新、回滚和撤销；原生可见性和共享目录影响与文件落盘状态分别展示。参见 [Skill 管理说明](SKILLS.md)。
+- 所有权检查覆盖跨资源库的祖先项目记录，以及延迟应用的纯 Home ChangeSet。OpenCode 的 Claude 兼容可见性遵循禁用开关，其默认来源独立于 Claude Home 覆盖配置。
+- OpenCode 查看范围包含原生配置目录及生效的 `skills.paths`，综合项目禁用配置和独立来源判断可见性。部署列表刷新当前原生读取方，不重写所有权记录。
+- 本地复制入库支持以目录名代替显式 `name` 的 Skill。OpenCode 兼容来源扫描包含隐藏、嵌套和祖先目录，不增加写入目标。
+
+Skill 操作由独立 Worker 顺序处理，允许 1 个执行中请求和最多 8 个等待请求。网络任务从入队起采用 180 秒总期限，队列满立即返回错误。已启动的本地写入完成或回滚后才结束退出；慢目录请求和文件处理不占用 Runtime 主请求循环。
+
+### 工具与更新
+
+- 管理 Codex、Claude Code、Cursor、OpenCode、OpenClaw、Hermes 和 Grok Build。Antigravity CLI 支持检测并提供官方安装文档，但不会自动执行远程脚本安装器。DeepSeek Harness 没有受支持的稳定工具管理渠道，因此不在此处展示。
+- 每处安装展示可执行路径与解析后路径、版本、可运行状态、安装来源、运行环境、对应管理器和 PATH 默认项。
+- 版本比较遵循检测到的安装渠道，不会把 GitHub 或 npm 的版本通用于所有安装。
+- 自动操作绑定实际安装与固定目标版本，通过经过验证的 npm、pnpm、bun 或 Volta 参数执行，不经过 Shell，也不请求提权。Homebrew 或官方更新器无法固定精确目标版本时，只提供供用户审查并自行运行的命令。
+- 多个物理安装、来源不明、管理器不可用、需要提权、远程脚本或不支持的渠道会阻止自动执行，改为提供官方命令或文档。
+- 命令退出后只有重新检测到目标安装可运行且达到预期版本，才会报告成功。
+
+### Agent 支持
+
+| Agent | 发现与盘点 | 上下文诊断与同步 | 会话历史 | 交接来源 | 工具管理 |
+| --- | --- | --- | --- | --- | --- |
+| Codex | 支持 | 支持 | 支持 | 支持 | 支持 |
+| Claude Code | 支持 | 支持 | 支持 | 支持 | 支持 |
+| Antigravity | 支持 | 支持 | ACP 会话 | 仅作来源 | 检测/文档 |
+| Cursor           | 支持       | 支持             | 已验证 CLI 存储 / 已连接的 macOS IDE profile | CLI / IDE，逐会话核验 | 支持      |
+| OpenCode | 支持 | 支持 | 支持 | 支持 | 支持 |
+| OpenClaw | 支持 | 支持 | 只读 | 逐会话核验 | 支持 |
+| Hermes | 支持 | 支持 | 只读 | 逐会话核验 | 支持 |
+| Grok Build | 支持 | 支持 | 只读 | 逐会话核验 | 支持 |
+| DeepSeek Harness | Beta，只读 | 仅诊断 | — | — | — |
+
+AgentKib 会区分“已安装”和“卸载后仍留有本地数据”。涉及 Agent Home 的写入会单独请求授权。Antigravity ACP 会话不代表完整的 Desktop/IDE 或 CLI 历史；当前稳定接口也不能把外部历史导入 Antigravity 原生会话。DeepSeek Harness 仍是只读 Beta 目标，不会被写入、配置 MCP 或纳入工具管理。
+
+### Web 访问与续接
+
+- 配对首先授予读取权限；发送和审批是单独的浏览器权限，同时还需要打开主机控制开关。
+- Claude Code 桌面/Web 在 macOS CLI ≥ `2.1.263` 上共用执行服务，前台 Bash 契约要求 ≥ `2.1.285`：准备新会话不调用模型，停止原终端并确认后可续接原 UUID。仍核验原生身份、协议结构和回执，新版通过最低门槛不代表真实设备验收通过；LAN 仍禁上传，Windows/Linux 控制保持不可用。详见 [Claude 使用说明](CLAUDE-WEB.md) 与[历史原生 QA](../qa/claude-managed-2026-09-30.md) 及[当前 TypeScript QA](../qa/typescript-stability-2026-10-07.md)。
+- Codex Web 控制跟随官方客户端中已打开的 owner 会话，Desktop 基础控制要求 ≥ `26.917.62051`，会话设置要求 ≥ `26.924.22138`。版本未知或格式异常、平台不支持、没有 owner 或原生协议不兼容时保持只读；满足门槛不能代替原生校验和真实验收。
+- Antigravity Web 控制只管理官方 ACP server 返回的会话。运行时协商 ACP v1 能力，重新核验索引会话和工作区，并要求 revision、turn、request 与服务端提供的权限选项全部精确匹配。
+- 请求回执不代表轮次或审批已经完成。断线或结果不明确时不会自动重试。
+
+### 平台状态
+
+| 平台 | 状态 |
+| --- | --- |
+| macOS 13.3+（Apple Silicon / Intel） | 主要开发与验收平台；发布包已签名并通过 Apple 公证 |
+| Windows 11 x64 | 发布工作流构建并烟测 NSIS；安装包尚未进行 Authenticode 签名 |
+| Ubuntu 22.04 x64 | 核心 CI 平台；发布包包含经过验证的 `.deb` 与 AppImage |
+| Fedora x64 | PR 运行平台检查；发布包包含经过验证的 `.rpm` |
+| Windows ARM64 / Linux ARM64 | Preview 包，原生回归覆盖有限 |
+
+平台配置和已知限制见 [Windows 指南](WINDOWS.md)、[升级指南](UPGRADING.md)和[发布指南](RELEASE.md)。

@@ -1,0 +1,14 @@
+node_modules/
+/dist/
+/dist-backend/
+/build/
+/.mygo/
+mygo_windows_*.syso
+.cache/node-runtime/
+resources/darwin-*/runtime/
+resources/darwin-*/native/
+resources/linux-*/runtime/
+resources/linux-*/native/
+resources/windows-*/runtime/
+resources/windows-*/native/
+.DS_Store

@@ -1,0 +1,84 @@
+appId: ai.agentkib
+productName: AgentKib
+executableName: AgentKib
+directories:
+  output: release-electron
+files:
+  - dist/**
+  - dist-electron/**
+  # Renderer and main-process dependencies are bundled by Vite.
+  - "!node_modules/**"
+  - "!**/*.map"
+  - "!**/*.tsbuildinfo"
+  - "!**/.DS_Store"
+electronLanguages:
+  - en-US
+  - ja
+  - zh-CN
+  - zh-TW
+compression: normal
+asarUnpack:
+  - dist-electron/native/koffi/**
+extraResources:
+  - from: build/cursor-bridge
+    to: cursor-bridge
+  - from: ../../LICENSE
+    to: licenses/AgentKib-LICENSE
+  - from: resources/quota/resources/licenses
+    to: licenses/quota
+  - from: ../web/dist
+    to: web
+  - from: build/frpc
+    to: bin
+  - from: build/quota
+    to: bin
+  - from: resources/icons/tray-icon.png
+    to: icons/tray-icon.png
+  - from: resources/icons/app-icon-white.png
+    to: icons/app-icon-white.png
+  - from: resources/icons/app-icon-black.png
+    to: icons/app-icon-black.png
+  - from: resources/icons/app-icon-white-macos.png
+    to: icons/app-icon-white-macos.png
+  - from: resources/icons/app-icon-black-macos.png
+    to: icons/app-icon-black-macos.png
+mac:
+  extraResources:
+    - from: resources/quota/resources/CodexBar_CodexBarCore.bundle
+      to: CodexBar_CodexBarCore.bundle
+  icon: resources/icons/icon.icns
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  minimumSystemVersion: 13.3.0
+  target:
+    - dmg
+    - zip
+  artifactName: AgentKib_${version}_macos-${arch}.${ext}
+win:
+  extraResources:
+    - from: resources/quota/resources/windows
+      to: windows
+  icon: resources/icons/icon.ico
+  target:
+    - nsis
+  artifactName: AgentKib_${version}_windows-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+linux:
+  extraResources:
+    - from: resources/quota/resources/linux
+      to: bin/linux
+  icon: resources/icons/icon.png
+  category: Development
+  maintainer: AgentKib contributors
+  vendor: AgentKib
+  target:
+    - AppImage
+    - deb
+    - rpm
+  artifactName: AgentKib_${version}_linux-${arch}.${ext}
+publish:
+  provider: github
+  owner: starroyhq
+  repo: agentkib

@@ -1,0 +1,15 @@
+import type { AgentInstallation, AgentSupport, ContinuationCapability } from "@/core/types";
+
+/**
+ * Support is reported by the runtime for a concrete installation. Do not infer
+ * capabilities from the agent kind: old runtimes may be able to discover an
+ * agent while still not reporting which surfaces are safe to use.
+ */
+export function agentSupport(installation?: AgentInstallation): AgentSupport | undefined {
+  return installation?.support;
+}
+
+/** Only a successful check of this session's concrete format enables continuation. */
+export function canContinueFromHistory(capability?: ContinuationCapability): boolean {
+  return capability?.status === "supported";
+}

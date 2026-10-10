@@ -1,0 +1,1434 @@
+export type AgentKind =
+  | "codex"
+  | "claude-code"
+  | "antigravity"
+  | "cursor"
+  | "opencode"
+  | "open-claw"
+  | "hermes"
+  | "grok-build"
+  | "deepseek-harness";
+export type MemoryStatus = "pending" | "approved" | "rejected" | "invalidated";
+export type MemoryType =
+  | "user_preference"
+  | "project_fact"
+  | "decision"
+  | "constraint"
+  | "failed_attempt"
+  | "open_loop"
+  | "task_state"
+  | "agent_observation";
+
+export interface AgentDetection {
+  agent: AgentKind;
+  detected: boolean;
+  asset_count: number;
+  warnings: string[];
+}
+export interface AssetRecord {
+  agent: AgentKind;
+  kind: string;
+  path: string;
+  exists: boolean;
+  size: number;
+  summary: string;
+  summary_key?: string;
+  summary_params?: Record<string, string>;
+}
+export interface WorkspaceScan {
+  root: string;
+  manifest_exists: boolean;
+  agents: AgentDetection[];
+  assets: AssetRecord[];
+  warnings: string[];
+}
+export interface SkillDefinition {
+  name: string;
+  path: string;
+  targets: AgentKind[];
+}
+export type ConnectionDefinition =
+  | {
+      name: string;
+      transport: "stdio";
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+      allow_tools: string[];
+      targets: AgentKind[];
+    }
+  | {
+      name: string;
+      transport: "http";
+      url: string;
+      env: Record<string, string>;
+      allow_tools: string[];
+      targets: AgentKind[];
+    };
+export interface Manifest {
+  schema_version: number;
+  workspace: { id: string; name: string };
+  instructions: {
+    shared: string;
+    scoped: Array<{ path: string; content: string }>;
+    platform_overrides: Partial<Record<AgentKind, string>>;
+  };
+  skills: SkillDefinition[];
+  mcp: { config: string };
+  connections: ConnectionDefinition[];
+  memories: { require_approval: boolean };
+  adapters: Partial<
+    Record<AgentKind, { enabled: boolean; generated_hashes: Record<string, string> }>
+  >;
+}
+export interface ContextPreview {
+  agent: AgentKind;
+  project: string;
+  cwd: string;
+  sections: Array<{ source: string; scope: string; content: string; precedence: number }>;
+  visible_skills: string[];
+  visible_connections: string[];
+  approved_memories: string[];
+  warnings: string[];
+}
+export type DoctorSeverity = "error" | "warning" | "info";
+export type DoctorStatus = "healthy" | "attention" | "unavailable" | "not-applicable";
+export interface DoctorAssetStatus {
+  status: DoctorStatus;
+  expected: number;
+  actual: number;
+}
+export interface DoctorAgentRow {
+  agent: AgentKind;
+  detected: boolean;
+  installed: boolean;
+  enabled: boolean;
+  writable: boolean;
+  instructions: DoctorAssetStatus;
+  skills: DoctorAssetStatus;
+  mcp: DoctorAssetStatus;
+}
+export interface DoctorEvidence {
+  path?: string;
+  detail: string;
+  expected?: string;
+  actual?: string;
+}
+export interface DoctorIssue {
+  id: string;
+  code: string;
+  severity: DoctorSeverity;
+  agent?: AgentKind;
+  asset_kind?: string;
+  repairable: boolean;
+  evidence: DoctorEvidence[];
+}
+export interface ContextDoctorSummary {
+  workspace_id: string;
+  error_count: number;
+  warning_count: number;
+  info_count: number;
+  repairable_count: number;
+  checked_at: string;
+}
+export interface ContextDoctorReport {
+  summary: ContextDoctorSummary;
+  matrix: DoctorAgentRow[];
+  issues: DoctorIssue[];
+}
+export interface FileChange {
+  target: string;
+  scope: "project" | "agent-home" | "application-data";
+  original_hash?: string;
+  before: string;
+  after: string;
+  risk: "low" | "medium" | "high";
+  validator: string;
+}
+export interface ChangeSet {
+  id: string;
+  project_root: string;
+  created_at: string;
+  changes: FileChange[];
+  requires_home_approval: boolean;
+}
+export interface MemoryRecord {
+  id: string;
+  project_id: string;
+  memory_type: MemoryType;
+  content: string;
+  status: MemoryStatus;
+  source_agent?: string;
+  source_thread?: string;
+  source_reference?: string;
+  created_at: string;
+  approved_at?: string;
+  invalidated_by?: string;
+}
+export type CloseBehavior = "minimize-to-tray" | "quit";
+export type SupportedLocale = "zh-CN" | "zh-TW" | "ja-JP" | "en-US";
+export type LocalePreference = "system" | SupportedLocale;
+export type ThemePreference = "system" | "light" | "dark";
+export type AccentThemeId = "minimal-neutral" | "vtron" | "claude" | "sakura" | "ocean-breeze";
+export type EffectiveTheme = "light" | "dark";
+export type AppIconPreference = "white" | "black";
+export interface LocalizedMessage {
+  key: string;
+  params?: Record<string, string | number>;
+  detail?: string;
+}
+export interface McpNetworkSettings {
+  port: number;
+  lan_enabled: boolean;
+  lan_risk_accepted: boolean;
+}
+export interface McpHubStatus {
+  running: boolean;
+  bind_address: string;
+  port: number;
+  lan_enabled: boolean;
+  accessible_addresses: string[];
+  runtime_count: number;
+  error_count: number;
+  last_error?: string;
+}
+export interface McpConnectionInfo {
+  workspace_id: string;
+  target_agent: AgentKind;
+  url: string;
+  config: string;
+  target: string;
+  format: "json" | "toml" | "yaml";
+  scope: "project" | "agent-home";
+  hub_running: boolean;
+}
+export interface McpConnectionVerification {
+  url: string;
+  checked_at: string;
+  builtin_tools: number;
+  builtin_tool_names?: string[];
+  external_tools: string[];
+}
+export type McpRuntimeState = "stopped" | "starting" | "running" | "error";
+export interface McpRuntimeStatus {
+  server_id: string;
+  server_name: string;
+  config_hash: string;
+  /** Canonical workspace path, null for global; absent on older runtimes. */
+  project?: string | null;
+  state: McpRuntimeState;
+  started_at?: string;
+  last_used_at?: string;
+  error?: string;
+}
+export type McpPackageKind = "npm" | "pypi" | "remote" | "local";
+export type McpServerTransport =
+  | { transport: "stdio"; command: string; args: string[]; cwd?: string }
+  | { transport: "streamable-http"; url: string }
+  | { transport: "sse"; url: string };
+export type McpServerConfig = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  env: Record<string, string>;
+  headers: Record<string, string>;
+  targets: AgentKind[];
+  allow_tools: string[];
+  lan_allow_tools: string[];
+  supports_parallel_tool_calls: boolean;
+  package?: { kind: McpPackageKind; identifier: string; version?: string };
+} & McpServerTransport;
+export interface McpToolDescriptor {
+  server_id: string;
+  name: string;
+  description?: string;
+  input_schema: unknown;
+  read_only: boolean;
+}
+export interface McpRegistryEntry {
+  name: string;
+  description: string;
+  version: string;
+  package_kind: McpPackageKind;
+  identifier: string;
+  runtime_hint?: string;
+  url?: string;
+  required_env: string[];
+  runtime_arguments: string[];
+  package_arguments: string[];
+}
+export interface McpInstallation {
+  id: string;
+  name: string;
+  package_kind: McpPackageKind;
+  identifier: string;
+  version?: string;
+  install_path?: string;
+  status: string;
+  installed_at: string;
+  updated_at: string;
+}
+export interface McpMigrationCandidate {
+  id: string;
+  agent: AgentKind;
+  scope: string;
+  name: string;
+  source_path: string;
+  transport: string;
+  endpoint: string;
+  has_secret_values: boolean;
+  supported: boolean;
+  warnings: string[];
+  warning_messages?: import("@agentkib/runtime-protocol").McpDiagnosticMessage[];
+}
+export interface McpOAuthStart {
+  authorization_url: string;
+}
+export interface McpInstallResult {
+  installation: McpInstallation;
+  server: McpServerConfig;
+  tools: McpToolDescriptor[];
+}
+export interface RuntimeInfo {
+  app_name: string;
+  app_version: string;
+  app_channel: "stable" | "development";
+  updates_enabled: boolean;
+  data_dir: string;
+  database_path: string;
+  mcp_package_root: string;
+  mcp_hub: McpHubStatus;
+  mcp_network: McpNetworkSettings;
+  openclaw_config?: string;
+  hermes_config?: string;
+  close_behavior?: CloseBehavior;
+  locale_preference: LocalePreference;
+  effective_locale: SupportedLocale;
+  theme_preference: ThemePreference;
+  effective_theme: EffectiveTheme;
+  accent_theme_preference: AccentThemeId | null;
+  sidebar_width_preference: number | null;
+  app_icon_preference: AppIconPreference;
+  tray_available: boolean;
+  session_index_enabled: boolean;
+  local_auto_refresh_enabled: boolean;
+  quota_auto_refresh_enabled: boolean;
+  quota_auto_refresh_prompt_seen: boolean;
+  onboarding: OnboardingState;
+}
+export interface OnboardingState {
+  version: number;
+  acknowledged_version: number;
+  workspace_id?: string;
+  doctor_completed: boolean;
+  repairable_count: number;
+  repair_applied: boolean;
+}
+export type OnboardingEvent =
+  | { event: "doctor-completed"; workspace_id: string; repairable_count: number }
+  | { event: "repair-applied"; workspace_id: string }
+  | { event: "dismissed" }
+  | { event: "restarted" };
+export type AppUpdateInstallMode = "in-app" | "manual";
+export interface AppUpdateInfo {
+  current_version: string;
+  version: string;
+  published_at?: string;
+  notes?: string;
+  release_url: string;
+  install_mode: AppUpdateInstallMode;
+}
+export type AppUpdateProgress =
+  | { event: "started"; data: { content_length?: number } }
+  | { event: "progress"; data: { downloaded: number; content_length?: number } }
+  | { event: "finished" };
+export type WorkspaceStatus = "healthy" | "attention";
+export type DiscoveryEvidence = "session-cwd" | "configured-workspace" | "scan-marker" | "manual";
+export interface WorkspaceSource {
+  session_cwds?: string[] | null;
+  agent?: AgentKind;
+  evidence: DiscoveryEvidence;
+  session_count: number;
+  last_active_at?: string;
+}
+// Controller-only provenance. Never written back into the local workspace/session index.
+export interface RemoteRecordSource {
+  host_id: string;
+  host_name: string;
+  original_id: string;
+  online: boolean;
+  last_synced_at: string;
+}
+export interface WorkspaceSummary {
+  remote?: RemoteRecordSource;
+  id: string;
+  path: string;
+  name: string;
+  repository_group_id?: string;
+  manifest_workspace_id?: string;
+  status: WorkspaceStatus;
+  asset_count: number;
+  warning_count: number;
+  last_active_at?: string;
+  last_scanned_at?: string;
+  sources: WorkspaceSource[];
+}
+export interface AgentInstallation {
+  agent: AgentKind;
+  installed: boolean;
+  configured: boolean;
+  version?: string;
+  home?: string;
+  warnings: string[];
+  /** Optional in protocol v15; absent on older runtimes. */
+  support?: AgentSupport;
+}
+
+export type AgentControlCapability = "none" | "experimental";
+
+/** Static feature support, separate from whether an Agent is installed/configured. */
+export interface AgentSupport {
+  workspace_discovery: boolean;
+  session_list: boolean;
+  history_read: boolean;
+  continuation: boolean;
+  control: AgentControlCapability;
+}
+export type AgentToolState =
+  | "current"
+  | "update-available"
+  | "uninstalled"
+  | "conflict"
+  | "unknown";
+export type AgentToolChannel =
+  | "official-installer"
+  | "npm"
+  | "pnpm"
+  | "bun"
+  | "yarn"
+  | "homebrew"
+  | "volta"
+  | "desktop-app"
+  | "nix"
+  | "local"
+  | "unknown";
+export type AgentToolEnvironment =
+  | "system"
+  | "standalone"
+  | "nvm"
+  | "fnm"
+  | "mise"
+  | "volta"
+  | "unknown";
+export interface AgentToolInstallation {
+  id: string;
+  path: string;
+  resolved_path: string;
+  version?: string;
+  runnable: boolean;
+  error?: string;
+  channel: AgentToolChannel;
+  environment: AgentToolEnvironment;
+  manager_path?: string;
+  is_path_default: boolean;
+}
+export type AgentToolActionKind = "install" | "update" | "open-documentation";
+export type AgentToolActionMode = "execute" | "copy-command" | "open-documentation";
+export type AgentToolShell = "posix" | "powershell";
+export interface AgentToolAction {
+  id: string;
+  kind: AgentToolActionKind;
+  mode: AgentToolActionMode;
+  channel: AgentToolChannel;
+  shell?: AgentToolShell;
+  command?: string;
+  url?: string;
+  target_version?: string;
+  installation_id?: string;
+  manager_path?: string;
+}
+export interface AgentToolStatus {
+  agent: AgentKind;
+  installed: boolean;
+  current_version?: string;
+  latest_version?: string;
+  recommended_version?: string;
+  upstream_version?: string;
+  state: AgentToolState;
+  channel: AgentToolChannel;
+  installations: AgentToolInstallation[];
+  warnings: string[];
+  official_url: string;
+  release_url?: string;
+  actions: AgentToolAction[];
+}
+export type AgentToolExecutionStatus =
+  | "succeeded"
+  | "failed"
+  | "timed-out"
+  | "busy"
+  | "unchanged"
+  | "verification-failed";
+export interface AgentToolExecutionResult {
+  agent: AgentKind;
+  action_id: string;
+  status: AgentToolExecutionStatus;
+  exit_code?: number;
+  output: string;
+  installation_id?: string;
+  before_version?: string;
+  after_version?: string;
+  completed_at: string;
+}
+export type AgentToolCacheStatus = "fresh" | "cached" | "unavailable";
+export interface AgentToolSnapshot {
+  tools: AgentToolStatus[];
+  checked_at: string;
+  latest_checked_at?: string;
+  cache_status: AgentToolCacheStatus;
+  errors: string[];
+}
+export interface CatalogAsset {
+  id: string;
+  scope: "workspace" | "agent-home" | "agentkib-home";
+  workspace_id?: string;
+  agent?: AgentKind;
+  kind: string;
+  name: string;
+  path: string;
+  summary: string;
+  summary_key?: string;
+  summary_params?: Record<string, string>;
+  size: number;
+  modified_at?: string;
+}
+export type SkillSourceKind = "openai-curated" | "github";
+export type SkillVersionType = "tag" | "branch" | "commit";
+export interface SkillVersionSelector {
+  type: SkillVersionType;
+  value: string;
+}
+export interface SkillSource {
+  kind: SkillSourceKind;
+  repository: string;
+  ref: string;
+  ref_type?: SkillVersionType;
+  path: string;
+  resolved_commit: string;
+  tree_sha: string;
+}
+export interface SkillCandidate {
+  name: string;
+  description: string;
+  license?: string;
+  compatibility?: string;
+  source: SkillSource | null;
+}
+export interface SkillCatalogEntry extends SkillCandidate {
+  installed: boolean;
+}
+export interface SkillCatalogSnapshot {
+  entries: SkillCatalogEntry[];
+  cached_at: string;
+  stale: boolean;
+}
+export type InstalledSkillStatus = "current" | "update-available" | "modified" | "unmanaged";
+export interface InstalledSkill {
+  content_sha256?: string;
+  warnings?: string[];
+  name: string;
+  display_name: string;
+  description: string;
+  path: string;
+  size: number;
+  modified_at?: string;
+  status: InstalledSkillStatus;
+  source?: SkillSource | null;
+  installed_at?: string;
+  updated_at?: string;
+  can_rollback: boolean;
+}
+export interface SkillFileEntry {
+  /** Package-relative path; a trailing `/` denotes a display-only directory entry. */
+  path: string;
+  size: number;
+  executable: boolean;
+}
+export interface SkillOperationPreview {
+  token: string;
+  operation: "install" | "update";
+  skill: SkillCandidate;
+  files: SkillFileEntry[];
+  added: string[];
+  modified: string[];
+  removed: string[];
+  total_size: number;
+  local_modified: boolean;
+  expires_at: string;
+  library_id?: string;
+  previous_source?: SkillSource | null;
+}
+export type SkillVersionListRequest = (
+  | { library_id: string; source?: never }
+  | { source: SkillSource; library_id?: never }
+) & { type: "tag" | "branch"; page?: number };
+export interface SkillVersionList {
+  entries: { name: string; commit: string }[];
+  type: "tag" | "branch";
+  page: number;
+  has_more: boolean;
+}
+export interface SkillImportPreviewItem {
+  id: string;
+  observation_ids: string[];
+  paths: string[];
+  agents: AgentKind[];
+  resolved_path: string | null;
+  library_id: string | null;
+  display_name: string;
+  status: "ready" | "skipped" | "failed";
+  reason?: string;
+  preview?: SkillOperationPreview;
+}
+export interface SkillImportBatchPreview {
+  token: string;
+  expires_at: string;
+  total_size: number;
+  items: SkillImportPreviewItem[];
+}
+export interface SkillImportResult {
+  id: string;
+  observation_ids: string[];
+  status: "imported" | "skipped" | "failed";
+  library_id?: string;
+  skill?: InstalledSkill;
+  error?: string;
+  warnings?: string[];
+}
+export interface SkillImportBatchReport {
+  token: string;
+  items: SkillImportResult[];
+  warnings?: string[];
+}
+export interface RemovedSkill {
+  warnings?: string[];
+  id: string;
+  name: string;
+  display_name: string;
+  removed_at: string;
+  path: string;
+}
+export interface SkillFilePreview {
+  path: string;
+  content: string;
+}
+export type SkillScope = "personal" | "workspace";
+export interface SkillTargetCapability {
+  id: string;
+  agent: AgentKind;
+  scope: SkillScope;
+  workspace_id: string | null;
+  profile: string | null;
+  root: string;
+  scope_root: string;
+  visible_to: AgentKind[];
+  writable: boolean;
+  reason: string | null;
+  conditions: string[];
+}
+export interface SkillObservation {
+  id: string;
+  name: string;
+  path: string;
+  resolved_path: string | null;
+  scope: SkillScope;
+  workspace_id: string | null;
+  agents: AgentKind[];
+  kind: string;
+  status: string;
+  owner: string;
+  library_id: string | null;
+  diagnostics: string[];
+}
+export interface SkillInventory {
+  observations: SkillObservation[];
+  warnings: string[];
+}
+export interface SkillPackageFile extends SkillFileEntry {
+  sha256: string;
+  binary: boolean;
+}
+export interface SkillDetailRequest {
+  library_id?: string;
+  observation_id?: string;
+}
+export interface SkillDetail {
+  library_id: string | null;
+  observation_id: string | null;
+  name: string;
+  description: string;
+  source: SkillSource | null;
+  local_source?: string | null;
+  local_resolved_path?: string | null;
+  files: SkillPackageFile[];
+  previous_files?: SkillPackageFile[];
+  total_size: number;
+  diagnostics: string[];
+}
+export interface SkillPreviewFile {
+  path: string;
+  before: string | null;
+  after: string | null;
+  binary: boolean;
+  truncated: boolean;
+  before_size: number | null;
+  after_size: number | null;
+  before_sha256: string | null;
+  after_sha256: string | null;
+  before_executable: boolean | null;
+  after_executable: boolean | null;
+}
+export type SkillDeploymentOperation = "deploy" | "update" | "undeploy" | "rollback";
+export interface PrepareSkillDeploymentRequest {
+  operation: SkillDeploymentOperation;
+  library_id?: string;
+  deployment_id?: string;
+  target_ids?: string[];
+}
+export interface SkillDeployment {
+  id: string;
+  library_id: string;
+  library_root?: string | null;
+  source_is_current_library?: boolean;
+  package_name: string;
+  display_name?: string;
+  package_hash: string;
+  scope: SkillScope;
+  workspace_id: string | null;
+  scope_root: string;
+  target: string;
+  agents: AgentKind[];
+  visible_to: AgentKind[];
+  status: string;
+  diagnostics: string[];
+  previous_hash: string | null;
+  operation_id: string;
+  updated_at: string;
+}
+export interface SkillDeploymentTargetPreview {
+  target_id: string;
+  deployment_id: string | null;
+  path: string;
+  scope: SkillScope;
+  workspace_id: string | null;
+  agents: AgentKind[];
+  visible_to: AgentKind[];
+  added: string[];
+  modified: string[];
+  removed: string[];
+  conflicts: string[];
+  conditions: string[];
+}
+export interface SkillDeploymentPreview {
+  token: string;
+  operation: SkillDeploymentOperation;
+  library_id: string | null;
+  expires_at: string;
+  requires_home_approval: boolean;
+  targets: SkillDeploymentTargetPreview[];
+}
+export interface SkillDeploymentResult {
+  target_id: string;
+  deployment_id: string | null;
+  path: string;
+  success: boolean;
+  status: string;
+  error: string | null;
+}
+export interface SkillDeploymentReport {
+  operation_id: string;
+  results: SkillDeploymentResult[];
+  warnings: string[];
+}
+export interface DiscoveryReport {
+  started_at: string;
+  finished_at: string;
+  discovered_count: number;
+  removed_count: number;
+  errors: string[];
+  /** Optional in protocol v15; older reports remain valid without details. */
+  source_diagnostics?: DiscoverySourceDiagnostic[];
+}
+
+export type DiscoverySourceStatus =
+  | "not-configured"
+  | "missing"
+  | "empty"
+  | "succeeded"
+  | "partial"
+  | "permission-denied"
+  | "unsupported"
+  | "failed";
+
+export interface DiscoverySourceDiagnostic {
+  agent?: AgentKind;
+  source: string;
+  path?: string;
+  status: DiscoverySourceStatus | string;
+  started_at?: string;
+  finished_at?: string;
+  candidate_count?: number;
+  included_count?: number;
+  skipped_count?: number;
+  reasons?: string[];
+}
+export interface ScanRoot {
+  id: string;
+  path: string;
+  enabled: boolean;
+  max_depth: number;
+  created_at: string;
+}
+export interface ExcludedWorkspace {
+  path: string;
+  created_at: string;
+}
+export interface ObsidianInstallation {
+  installed: boolean;
+  app_path?: string;
+  version?: string;
+  cli_available: boolean;
+}
+export interface ObsidianVault {
+  path: string;
+  name: string;
+  source: "discovered" | "manual";
+  last_opened_at?: number;
+}
+export interface ObsidianWorkspaceLink {
+  workspace_id: string;
+  vault_path: string;
+  target_path: string;
+}
+export interface ObsidianIntegration {
+  installation: ObsidianInstallation;
+  vaults: ObsidianVault[];
+  workspace_links: ObsidianWorkspaceLink[];
+}
+export type RemoteGatewayKind = "open-claw" | "hermes";
+export type RemoteGatewayAuthKind = "none" | "token" | "password" | "session-token" | "basic";
+export type RemoteGatewayState = "pending" | "connected" | "pairing-required" | "error";
+export interface RemoteGatewayInput {
+  id?: string;
+  kind: RemoteGatewayKind;
+  name: string;
+  url: string;
+  auth_kind: RemoteGatewayAuthKind;
+  username?: string;
+  secret?: string;
+}
+export interface RemoteGatewayWorkspace {
+  id: string;
+  agent_id?: string;
+  name: string;
+  path?: string;
+  session_count: number;
+  last_active_at?: string;
+}
+export interface RemoteGatewayAsset {
+  id: string;
+  agent_id?: string;
+  kind: string;
+  name: string;
+  path: string;
+  size: number;
+}
+export interface RemoteGatewaySummary {
+  id: string;
+  kind: RemoteGatewayKind;
+  name: string;
+  url: string;
+  auth_kind: RemoteGatewayAuthKind;
+  username?: string;
+  has_credentials: boolean;
+  state: RemoteGatewayState;
+  version?: string;
+  capabilities: string[];
+  session_count: number;
+  workspaces: RemoteGatewayWorkspace[];
+  assets: RemoteGatewayAsset[];
+  pairing_request_id?: string;
+  last_connected_at?: string;
+  last_error?: string;
+}
+export interface ActivityRecord {
+  id: string;
+  project_id?: string;
+  action: string;
+  detail: string;
+  created_at: string;
+}
+export type UsageQuality = "exact" | "estimated" | "incomplete";
+export interface InsightsQuery {
+  from?: string;
+  to?: string;
+  agent?: AgentKind;
+  workspace_id?: string;
+  repository_group_id?: string;
+}
+export interface InsightsSummary {
+  total_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_tokens: number;
+  reasoning_tokens: number;
+  session_count: number;
+  my_commits: number;
+  all_commits: number;
+  attributed_commits: number;
+  active_days: number;
+  current_streak: number;
+  longest_streak: number;
+  quality: UsageQuality;
+  coverage_from?: string;
+  coverage_to?: string;
+  refreshed_at?: string;
+}
+export interface HeatmapPoint {
+  date: string;
+  tokens: number;
+  my_commits: number;
+  all_commits: number;
+  attributed_commits: number;
+  sessions: number;
+  quality: UsageQuality;
+}
+export interface AgentUsageBreakdown {
+  agent: AgentKind;
+  total_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_tokens: number;
+  reasoning_tokens: number;
+  session_count: number;
+  quality: UsageQuality;
+}
+export interface ModelUsageBreakdown {
+  model: string;
+  total_tokens: number;
+  session_count: number;
+}
+export interface WorkspaceUsageBreakdown {
+  workspace_id?: string;
+  name: string;
+  total_tokens: number;
+  session_count: number;
+}
+export interface RepositoryCommitBreakdown {
+  repository_group_id: string;
+  name: string;
+  my_commits: number;
+  all_commits: number;
+  attributed_commits: number;
+}
+export interface Achievement {
+  code: string;
+  category: string;
+  threshold: number;
+  progress: number;
+  unlocked_at?: string;
+}
+export interface ProviderStatus {
+  agent: AgentKind;
+  available: boolean;
+  quality: UsageQuality;
+  coverage_from?: string;
+  coverage_to?: string;
+  imported_events: number;
+  error_key?: string;
+  error_params?: Record<string, string>;
+  error?: string;
+}
+export interface InsightsStatus {
+  providers: ProviderStatus[];
+  refreshed_at?: string;
+  running: boolean;
+}
+export type RefreshKind = "discovery" | "insights" | "gateways" | "quota" | "storage";
+export type RefreshState = "idle" | "queued" | "running" | "succeeded" | "failed" | "backoff";
+export interface RefreshReceipt {
+  kind: RefreshKind;
+  disposition: "queued" | "already-running" | "backoff";
+  request_id: string;
+  status: RefreshJobStatus;
+}
+export interface RefreshJobStatus {
+  kind: RefreshKind;
+  state: RefreshState;
+  request_id?: string;
+  queued_at?: string;
+  started_at?: string;
+  finished_at?: string;
+  progress_current?: number;
+  progress_total?: number;
+  error?: string;
+  next_allowed_at?: string;
+}
+export type StorageMeasurement = "allocated-exact" | "logical-estimate";
+export type StorageQuality = "complete" | "partial" | "unavailable";
+export type StorageBreakdownKind = "directory" | "root-files";
+export type StorageNodeKind = "workspace" | "directory" | "root-files" | "aggregate";
+export interface StorageNode {
+  id: string;
+  name: string;
+  relative_path: string;
+  kind: StorageNodeKind;
+  allocated_bytes: number;
+  logical_bytes: number;
+  regenerable_bytes: number;
+  agent_asset_bytes: number;
+  file_count: number;
+  directory_count: number;
+  child_count: number;
+  children: StorageNode[];
+  expandable: boolean;
+  partial: boolean;
+}
+export interface StorageBreakdown {
+  name: string;
+  relative_path: string;
+  kind: StorageBreakdownKind;
+  allocated_bytes: number;
+  logical_bytes: number;
+  regenerable_bytes: number;
+  agent_asset_bytes: number;
+}
+export interface WorkspaceStorage {
+  workspace_id: string;
+  name: string;
+  path: string;
+  snapshot_version: number;
+  root?: StorageNode;
+  measurement: StorageMeasurement;
+  quality: StorageQuality;
+  allocated_bytes: number;
+  logical_bytes: number;
+  regenerable_bytes: number;
+  agent_asset_bytes: number;
+  file_count: number;
+  directory_count: number;
+  breakdown: StorageBreakdown[];
+  last_attempt_at: string;
+  last_success_at?: string;
+  error_key?: string;
+  error_detail?: string;
+}
+export interface StorageOverview {
+  total_workspace_count: number;
+  scanned_workspace_count: number;
+  allocated_bytes: number;
+  logical_bytes: number;
+  regenerable_bytes: number;
+  agent_asset_bytes: number;
+  last_scanned_at?: string;
+  workspaces: WorkspaceStorage[];
+}
+export interface InsightsView {
+  summary: InsightsSummary;
+  heatmap: HeatmapPoint[];
+  agents: AgentUsageBreakdown[];
+  models: ModelUsageBreakdown[];
+  workspaces: WorkspaceUsageBreakdown[];
+  repositories: RepositoryCommitBreakdown[];
+  achievements: Achievement[];
+  status: InsightsStatus;
+}
+export interface GitIdentitySummary {
+  id: string;
+  /** Translation key for built-in identity sources; literal label for other sources. */
+  label: string;
+  source: string;
+  enabled: boolean;
+}
+export type GitRefKind = "head" | "local-branch" | "remote-branch" | "tag" | "other";
+export interface GitRefLabel {
+  name: string;
+  full_name: string;
+  kind: GitRefKind;
+  current: boolean;
+}
+export type GitChangeKind =
+  | "modified"
+  | "added"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "untracked"
+  | "conflict"
+  | "type-changed"
+  | "unknown";
+export interface GitWorkingTreeChange {
+  path: string;
+  old_path?: string;
+  kind: GitChangeKind;
+  index_status?: string;
+  worktree_status?: string;
+  conflicted: boolean;
+}
+export interface GitWorkspaceSummary {
+  repository_root: string;
+  worktree_root: string;
+  head?: string;
+  head_oid?: string;
+  upstream?: string;
+  ahead: number;
+  behind: number;
+  stash_count: number;
+  detached: boolean;
+  refs: GitRefLabel[];
+  changes: GitWorkingTreeChange[];
+}
+export interface GitHistoryQuery {
+  cursor?: string;
+  limit?: number;
+  reference?: string;
+  author?: string;
+  since?: string;
+  until?: string;
+  path?: string;
+  merges_only?: boolean;
+}
+export interface GitCommitSummary {
+  oid: string;
+  parents: string[];
+  subject: string;
+  author_name: string;
+  authored_at: string;
+  refs: GitRefLabel[];
+}
+export interface GitCommitPage {
+  commits: GitCommitSummary[];
+  next_cursor?: string;
+  repository_fingerprint: string;
+}
+export interface GitFileChange {
+  status: string;
+  path: string;
+  old_path?: string;
+}
+export type GitDiffKind = "commit" | "worktree" | "staged";
+export interface GitDiffRequest {
+  kind: GitDiffKind;
+  path?: string;
+  oid?: string;
+}
+export interface GitDiff {
+  patch: string;
+  binary: boolean;
+  submodule: boolean;
+  encoding_lossy: boolean;
+  truncated: boolean;
+}
+export type WorkspaceOpenerCategory = "editor" | "terminal" | "file-manager";
+export interface WorkspaceOpener {
+  id: string;
+  name: string;
+  category: WorkspaceOpenerCategory;
+  preferred: boolean;
+}
+export type QuotaBackend = "codex-bar-cli" | "win-codex-bar";
+export type QuotaFreshness = "fresh" | "stale" | "unavailable";
+export interface QuotaIdentity {
+  account_email?: string;
+  plan?: string;
+}
+export interface QuotaWindow {
+  kind: string;
+  label: string;
+  used_percent: number;
+  remaining_percent: number;
+  reset_at?: string;
+}
+export interface QuotaCredits {
+  remaining: number;
+  unit: string;
+}
+export interface QuotaAccount {
+  id: string;
+  label: string;
+  active: boolean;
+  identity?: QuotaIdentity;
+  windows: QuotaWindow[];
+  error?: string;
+  updated_at?: string;
+}
+export interface QuotaProviderStatus {
+  level: string;
+  label: string;
+  updated_at?: string;
+}
+export interface QuotaProvider {
+  id: string;
+  name: string;
+  enabled: boolean;
+  source?: string;
+  status?: QuotaProviderStatus;
+  identity?: QuotaIdentity;
+  windows: QuotaWindow[];
+  credits?: QuotaCredits;
+  error?: string;
+  updated_at?: string;
+  accounts: QuotaAccount[];
+}
+export interface QuotaSnapshot {
+  schema_version: number;
+  backend: QuotaBackend;
+  backend_version?: string;
+  generated_at: string;
+  fetched_at: string;
+  stale_after_seconds: number;
+  freshness: QuotaFreshness;
+  providers: QuotaProvider[];
+}
+export interface QuotaCollectorStatus {
+  backend: QuotaBackend;
+  backend_version?: string;
+  platform_supported: boolean;
+  sidecar_available: boolean;
+  config_source: string;
+  last_attempt_at?: string;
+  last_success_at?: string;
+  running: boolean;
+  error_key?: string;
+  error_detail?: string;
+}
+export interface QuotaWindowSelector {
+  provider_id: string;
+  account_id?: string;
+  kind: string;
+  label: string;
+}
+export interface QuotaPopoverPreferences {
+  hidden_providers: string[];
+  hidden_windows: QuotaWindowSelector[];
+}
+export type AppMenuCommand = "add-workspace" | "add-scan-root" | "refresh-current" | "refresh-all";
+export interface AppMenuCommandRequest {
+  command: AppMenuCommand;
+}
+export interface AppNavigationRequest {
+  page: "home" | "workspaces" | "catalog" | "agents" | "quota" | "insights" | "settings";
+  settings_section?: "general" | "discovery" | "integrations" | "privacy" | "diagnostics";
+  provider?: string;
+  window?: QuotaWindowSelector;
+  configure_popover?: boolean;
+}
+
+export type SessionAvailability = "readable" | "metadata-only";
+export type SessionOrigin = "interactive" | "auxiliary" | "execution" | "unknown";
+export type SessionIndexFreshness = "fresh" | "stale" | "unavailable";
+export type ConversationEventKind = "user-message" | "agent-message" | "tool-summary";
+export type MessagePhase = "commentary" | "final_answer";
+export interface ConversationSessionSummary {
+  /** Verified index identities that route to this managed session. */
+  indexedSessionIds?: string[];
+  remote?: RemoteRecordSource;
+  id: string;
+  workspace_id: string;
+  agent: AgentKind;
+  title?: string;
+  created_at?: string;
+  updated_at?: string;
+  message_count?: number | null;
+  git_branch?: string;
+  archived: boolean;
+  sidechain: boolean;
+  origin?: SessionOrigin;
+  spawned_by_session_id?: string;
+  forked_from_session_id?: string;
+  availability: SessionAvailability;
+}
+export interface ConversationIndexStatus {
+  workspace_id: string;
+  agent: AgentKind;
+  freshness: SessionIndexFreshness;
+  session_count: number;
+  last_attempt_at?: string;
+  last_success_at?: string;
+  error_key?: string;
+  error_detail?: string;
+}
+export interface ConversationEvent {
+  id: string;
+  kind: ConversationEventKind;
+  turn_id?: string;
+  message_phase?: MessagePhase;
+  timestamp?: string;
+  content?: string;
+  tool_name?: string;
+  tool_status?: string;
+  duration_ms?: number | null;
+  attachment_count: number;
+  truncated: boolean;
+}
+export interface ConversationEventPage {
+  events: ConversationEvent[];
+  next_cursor?: string;
+  warnings: string[];
+}
+export type HandoffFormat = "markdown" | "json";
+export type SessionContinuationMode = "native-session" | "handoff-file";
+export type SessionWindowStrategy = "full" | "windowed";
+export type SessionLossCode =
+  | "damaged-record"
+  | "orphan-tool-result"
+  | "unsupported-attachment"
+  | "external-attachment"
+  | "reasoning-excluded"
+  | "source-content-truncated"
+  | "target-tool-summary"
+  | "target-attachment-omitted";
+export interface SessionLoss {
+  code: SessionLossCode;
+  count: number;
+}
+export interface NativeImportCapability {
+  supported: boolean;
+  beta: boolean;
+  reason?: string;
+}
+export type ContinuationCapabilityStatus =
+  | "supported"
+  | "unavailable"
+  | "unsupported"
+  | "unverified";
+export interface ContinuationCapability {
+  status: ContinuationCapabilityStatus;
+  reason?: string | null;
+  source_surface?: "cursor-ide" | "cursor-cli";
+}
+export interface ContinuationCapabilities {
+  source_agent: AgentKind;
+  target_agent: AgentKind;
+  source_read: ContinuationCapability;
+  source_parse: ContinuationCapability;
+  native_resume: ContinuationCapability;
+  file_handoff: ContinuationCapability;
+  windowed_context: ContinuationCapability;
+  mcp_setup: ContinuationCapability;
+  interactive_launch: ContinuationCapability;
+}
+export interface SessionImportStats {
+  turn_count: number;
+  message_count: number;
+  tool_call_count: number;
+  tool_result_count: number;
+  attachment_count: number;
+}
+export interface SessionWindowStats {
+  estimated_total_tokens: number;
+  estimated_active_tokens: number;
+  estimated_deferred_tokens: number;
+  active: SessionImportStats;
+  deferred_turn_count: number;
+  deferred_block_count: number;
+  estimate_quality: "conservative";
+}
+export interface SessionHandoffRequest {
+  session_id: string;
+  target_agent: AgentKind;
+  format: HandoffFormat;
+  history_budget_tokens: number;
+  target_surface?: "cursor-ide";
+  binding_id?: string;
+}
+export type CursorBridgeRequest =
+  | { action: "status"; workspaceId: string }
+  | { action: "connect"; workspaceId: string; bindingId?: string }
+  | { action: "disconnect"; workspaceId: string; bindingId: string };
+export interface CursorBridgeStatus {
+  supported: boolean;
+  supportedVersions: string[];
+  bindings: Array<{ id: string; profile: string; version: string; connected: boolean }>;
+}
+export interface CursorBridgeChallenge {
+  challenge: string;
+  expires_in_seconds: number;
+}
+export type CursorBridgeResponse =
+  | CursorBridgeStatus
+  | CursorBridgeChallenge
+  | { disconnected: boolean };
+export interface CursorBridgeBundle {
+  id: "agentkib.cursor-bridge";
+  version: "0.1.0";
+  sha256: string;
+  path: string;
+}
+export interface SessionHandoffDraft {
+  filename: string;
+  format: HandoffFormat;
+  content: string;
+  redaction_count: number;
+  source_fingerprint: string;
+  target_fingerprint?: string;
+  mode: SessionContinuationMode;
+  native_capability: NativeImportCapability;
+  capabilities: ContinuationCapabilities;
+  stats: SessionImportStats;
+  history_budget_tokens: number;
+  window_strategy: SessionWindowStrategy;
+  window_stats: SessionWindowStats;
+  archive_id?: string;
+  mcp_available: boolean;
+  losses: SessionLoss[];
+}
+export type SessionHandoffPreparation = { status: "ready"; draft: SessionHandoffDraft };
+export type SessionHandoffLaunchRequest =
+  | {
+      mode: "native-import";
+      operation_id: string;
+      workspace_id: string;
+      target_agent: AgentKind;
+      plan_hash: string;
+      binding_id?: string;
+      capabilities?: ContinuationCapabilities;
+    }
+  | {
+      mode: "native-session";
+      workspace_id: string;
+      target_agent: AgentKind;
+      target_session_id: string;
+      target_path: string;
+      archive_id?: string;
+      archive_hash?: string;
+      capabilities?: ContinuationCapabilities;
+    }
+  | {
+      mode: "handoff-file";
+      workspace_id: string;
+      filename: string;
+      target_agent: AgentKind;
+      archive_id?: string;
+      archive_hash?: string;
+      capabilities?: ContinuationCapabilities;
+    };
+export interface NativeImportOperation {
+  source_session_id: string;
+  launch_request: Extract<SessionHandoffLaunchRequest, { mode: "native-import" }>;
+  binding_id?: string | null;
+  target_session_id?: string;
+  status: "prepared" | "outcome-unknown" | "verified" | "launched";
+}
+export interface PlannedSessionHandoff {
+  change_set: ChangeSet;
+  launch_request: SessionHandoffLaunchRequest;
+}
+export interface HandoffLaunchReceipt {
+  target_agent: AgentKind;
+  terminal: string;
+}
+export type HandoffContinuationResult =
+  | { status: "launched"; receipt: HandoffLaunchReceipt }
+  | { status: "applied-launch-failed"; error: LocalizedMessage }
+  | { status: "import-outcome-unknown"; error: LocalizedMessage };
