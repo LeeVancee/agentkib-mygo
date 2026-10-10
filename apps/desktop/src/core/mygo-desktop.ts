@@ -189,15 +189,22 @@ const mygoDesktopApi = {
       rpc("workspace.resolveContext", { project, cwd, agent }),
     exclude: (id: string) => rpc("workspace.exclude", { id }),
     restoreExcluded: (path: string) => rpc("workspace.restoreExcluded", { path }),
-    sessions: (id: string) => rpc("workspace.sessions", { id }),
-    sessionStatus: (id: string) => rpc("workspace.sessionStatus", { id }),
-    refreshSessions: (id: string, force?: boolean) => rpc("workspace.refreshSessions", { id, force }),
+    sessions: (id: string) => rpc("workspace.sessions", { workspaceId: id }),
+    sessionStatus: (id: string) => rpc("workspace.sessionStatus", { workspaceId: id }),
+    refreshSessions: (id: string, force?: boolean) =>
+      rpc("workspace.refreshSessions", { workspaceId: id, force: force ?? false }),
     sessionEvents: (id: string, cursor?: string, limit?: number) =>
-      rpc("session.events", { id, cursor, limit }),
+      rpc("session.events", { sessionId: id, cursor, limit }),
+    sourceCapability: (sessionId: string) =>
+      rpc("sessions.sourceCapability", { sessionId }),
+    nativeImports: (workspaceId: string) => rpc("sessions.nativeImports", { workspaceId }),
     doctorSummaries: (ids: string[]) => rpc("workspace.doctorSummaries", { workspaceIds: ids }),
     add: (path: string) => rpc("workspace.add", { path }),
     refresh: (id: string) => rpc("workspace.refresh", { id }),
     doctorReport: (id: string) => rpc("workspace.doctorReport", { id }),
+    openers: (id: string) => rpc("workspace.openers", { workspaceId: id }),
+    open: (id: string, openerId?: string) =>
+      rpc("workspace.openWith", { workspaceId: id, openerId }),
   },
   remote: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`remote.${String(name)}`) }),
   claude: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`claude.${String(name)}`) }),
