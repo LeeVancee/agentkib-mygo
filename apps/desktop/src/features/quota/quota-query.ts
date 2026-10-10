@@ -58,7 +58,7 @@ export function useQuotaRefreshJob() {
     queryKey: quotaKeys.refreshJob(),
     queryFn: async () => {
       const jobs = await api.refreshStatus();
-      return jobs.find((job) => job.kind === "quota");
+      return jobs.find((job) => job.kind === "quota") ?? null;
     },
     staleTime: 0,
     refetchInterval: (current) => {

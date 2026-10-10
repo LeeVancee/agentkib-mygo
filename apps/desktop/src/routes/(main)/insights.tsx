@@ -34,7 +34,7 @@ function InsightsRoute() {
   const refreshJob = refreshJobQuery.data;
   const refreshing =
     refreshMutation.isPending || refreshJob?.state === "queued" || refreshJob?.state === "running";
-  const bannerError = insightsRefreshError(refreshError, refreshJob, localizeMessage);
+  const bannerError = insightsRefreshError(refreshError, refreshJob ?? undefined, localizeMessage);
 
   const setSection = (nextSection: InsightsSection) => {
     void navigate({

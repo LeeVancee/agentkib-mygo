@@ -1,4 +1,5 @@
 import type { DesktopApi, DesktopRuntimeStatus } from "../../electron/api";
+import type { RemoteRequest } from "./remote-types";
 import type {
   DiscoveryPlan,
   DiscoverySnapshot,
@@ -206,7 +207,9 @@ const mygoDesktopApi = {
     open: (id: string, openerId?: string) =>
       rpc("workspace.openWith", { workspaceId: id, openerId }),
   },
-  remote: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`remote.${String(name)}`) }),
+  remote: {
+    request: (request: RemoteRequest) => rpc("remote.request", request),
+  },
   claude: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`claude.${String(name)}`) }),
   web: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`web.${String(name)}`) }),
 } as unknown as DesktopApi;

@@ -33,7 +33,7 @@ export function useInsightsRefreshJob() {
     queryKey: insightsKeys.refreshJob(),
     queryFn: async () => {
       const jobs = await api.refreshStatus();
-      return jobs.find((job) => job.kind === "insights");
+      return jobs.find((job) => job.kind === "insights") ?? null;
     },
     staleTime: 0,
     refetchInterval: (current) => {
