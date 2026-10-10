@@ -38,4 +38,7 @@ export const DesktopHost = {
   quit(): Promise<void> {
     return call("DesktopHost.Quit");
   },
+  setAppIcon(preference: string): Promise<void> {
+    return call("DesktopHost.SetAppIcon", preference);
+  },
 } as const;

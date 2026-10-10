@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/egoist/mygo"
 )
@@ -13,6 +15,83 @@ import (
 // Electron IPC.
 type DesktopHost struct {
 	window *mygo.Window
+}
+
+func (h *DesktopHost) SetAppIcon(preference string) error {
+	if preference != "white" && preference != "black" {
+		return fmt.Errorf("invalid app icon preference: %s", preference)
+	}
+
+	suffix := ""
+	if runtime.GOOS == "darwin" {
+		suffix = "-macos"
+	}
+	filename := fmt.Sprintf("app-icon-%s%s.png", preference, suffix)
+	for _, directory := range iconDirectories() {
+		data, err := os.ReadFile(filepath.Join(directory, filename))
+		if err != nil {
+			continue
+		}
+		if runtime.GOOS == "darwin" {
+			return mygo.App.Dock.SetIcon(data)
+		}
+		if h.window == nil {
+			return nil
+		}
+		return h.window.SetIcon(data)
+	}
+	return fmt.Errorf("application icon not found: %s", filename)
+}
+
+func iconDirectories() []string {
+	directories := []string{}
+	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
+		directories = append(directories, filepath.Join(resources, "icons"))
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		directories = append(directories,
+			filepath.Join(cwd, "../resources/icons"),
+			filepath.Join(cwd, "../../resources/icons"),
+		)
+	}
+	if executable, err := os.Executable(); err == nil {
+		directories = append(directories,
+			filepath.Join(filepath.Dir(executable), "../resources/icons"),
+			filepath.Join(filepath.Dir(executable), "../../resources/icons"),
+		)
+	}
+	return uniquePaths(directories)
+}
+
+func uniquePaths(paths []string) []string {
+	seen := make(map[string]struct{}, len(paths))
+	result := make([]string, 0, len(paths))
+	for _, path := range paths {
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		if _, ok := seen[absolute]; ok {
+			continue
+		}
+		seen[absolute] = struct{}{}
+		result = append(result, absolute)
+	}
+	return result
+}
+
+func (h *DesktopHost) appIconPreference(dataDir string) string {
+	data, err := os.ReadFile(filepath.Join(dataDir, "preferences.json"))
+	if err != nil {
+		return "white"
+	}
+	var preferences struct {
+		AppIconPreference string `json:"app_icon_preference"`
+	}
+	if json.Unmarshal(data, &preferences) == nil && preferences.AppIconPreference == "black" {
+		return "black"
+	}
+	return "white"
 }
 
 func (h *DesktopHost) OpenDirectory(title string) (string, error) {
@@ -120,6 +199,7 @@ func main() {
 			TrafficLightPosition: &mygo.Point{X: 15, Y: 17},
 			TitleBarHeight:       52,
 		})
+		_ = desktop.SetAppIcon(desktop.appIconPreference(backend.dataDir))
 	})
 
 	if err := mygo.App.Run(); err != nil {

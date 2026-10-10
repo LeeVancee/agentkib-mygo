@@ -8,7 +8,7 @@
   "frontendDist": "../dist",
   "bindings": "../src/mygo.ts",
   "out": "build",
-  "resources": ["../dist-electron"],
+  "resources": ["../dist-electron", "../resources/icons"],
   "macos": {
     "minimumSystemVersion": "13.3",
     "signingIdentity": "-"

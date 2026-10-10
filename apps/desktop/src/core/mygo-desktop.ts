@@ -159,7 +159,11 @@ const mygoDesktopApi = {
     setThemePreference: (preference: unknown) => rpc("settings.setThemePreference", { preference }),
     setAccentThemePreference: (preference: unknown) => rpc("settings.setAccentThemePreference", { preference }),
     setSidebarWidthPreference: (preference: unknown) => rpc("settings.setSidebarWidthPreference", { preference }),
-    setAppIconPreference: (preference: unknown) => rpc("settings.setAppIconPreference", { preference }),
+    setAppIconPreference: async (preference: unknown) => {
+      const runtime = await rpc("settings.setAppIconPreference", { preference });
+      await DesktopHost.setAppIcon(String(preference));
+      return runtime;
+    },
   },
   updates: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`updates.${String(name)}`) }),
   changes: {
