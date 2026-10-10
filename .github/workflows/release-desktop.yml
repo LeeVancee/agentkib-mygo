@@ -1,0 +1,16 @@
+name: Desktop Package Artifacts
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    uses: ./.github/workflows/desktop-mygo.yml
+    permissions:
+      contents: write
