@@ -2,6 +2,7 @@ node_modules/
 /dist/
 /dist-backend/
 /build/
+**/build/
 /.mygo/
 **/.mygo/
 mygo_windows_*.syso
