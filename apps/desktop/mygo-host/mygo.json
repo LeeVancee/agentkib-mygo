@@ -1,16 +1,20 @@
 {
-  "name": "AgentKib MyGo",
-  "identifier": "ai.agentkib.mygo",
-  "version": "0.1.0",
+  "name": "AgentKib",
+  "identifier": "ai.agentkib",
+  "version": "0.17.0",
+  "copyright": "© 2026 AgentKib contributors",
   "main": ".",
   "frontendDist": "../dist",
   "bindings": "../src/mygo.ts",
   "out": "build",
+  "resources": ["../dist-electron"],
   "macos": {
     "minimumSystemVersion": "13.3",
     "signingIdentity": "-"
   },
   "linux": {
-    "maintainer": "AgentKib"
+    "maintainer": "AgentKib",
+    "comment": "Discover, diagnose, and synchronize coding agent configuration.",
+    "categories": ["Utility", "Development"]
   }
 }

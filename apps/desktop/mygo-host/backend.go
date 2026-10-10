@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+
+	"github.com/egoist/mygo"
 )
 
 const runtimeProtocolVersion = 17
@@ -157,6 +159,9 @@ func resolveBackendEntry() (string, error) {
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, filepath.Join(cwd, "../dist-electron/backend.cjs"), filepath.Join(cwd, "../../dist-electron/backend.cjs"))
+	}
+	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
+		candidates = append(candidates, filepath.Join(resources, "dist-electron", "backend.cjs"))
 	}
 	if executable, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(executable), "../dist-electron/backend.cjs"))
