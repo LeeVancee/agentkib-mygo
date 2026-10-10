@@ -69,9 +69,11 @@ const home: DesktopApi["home"] = {
   setLocalAutoRefresh: (enabled) => rpc("set_local_auto_refresh", { value: enabled }),
   setQuotaPromptSeen: (seen) => rpc("quota.setPromptSeen", { value: seen }),
   storageOverview: () => rpc("storage.overview"),
-  storageChildren: (workspaceId, relativePath) => rpc("storage.children", { workspaceId, relativePath }),
+  storageChildren: (workspaceId, relativePath) =>
+    rpc("storage.children", { workspaceId, relativePath }),
   refreshStorage: () => rpc("storage.refresh", { force: true }),
-  openStoragePath: (workspaceId, relativePath) => rpc("storage.resolvePath", { workspaceId, relativePath }),
+  openStoragePath: (workspaceId, relativePath) =>
+    rpc("storage.resolvePath", { workspaceId, relativePath }),
   cancelStorage: () => rpc("storage.cancel"),
   refreshDiscovery: async () => {
     const queuedAt = new Date().toISOString().replace(".000Z", "Z");
@@ -148,7 +150,10 @@ const mygoDesktopApi = {
     openDirectory: (title?: string) =>
       DesktopHost.openDirectory(title ?? "").then((path) => path || undefined),
     openExternal: (url: string) => DesktopHost.openExternal(url),
-    openFilesAndFoldersSettings: () => DesktopHost.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders"),
+    openFilesAndFoldersSettings: () =>
+      DesktopHost.openExternal(
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders",
+      ),
     openQuotaDashboard: () => Promise.resolve(),
     hideWindow: () => DesktopHost.hideWindow(),
     quit: () => DesktopHost.quit(),
@@ -157,15 +162,25 @@ const mygoDesktopApi = {
     setCloseBehavior: (value: unknown) => rpc("settings.setCloseBehavior", { value }),
     setLocale: (preference: unknown) => rpc("settings.setLocale", { preference }),
     setThemePreference: (preference: unknown) => rpc("settings.setThemePreference", { preference }),
-    setAccentThemePreference: (preference: unknown) => rpc("settings.setAccentThemePreference", { preference }),
-    setSidebarWidthPreference: (preference: unknown) => rpc("settings.setSidebarWidthPreference", { preference }),
+    setAccentThemePreference: (preference: unknown) =>
+      rpc("settings.setAccentThemePreference", { preference }),
+    setSidebarWidthPreference: (preference: unknown) =>
+      rpc("settings.setSidebarWidthPreference", { preference }),
     setAppIconPreference: async (preference: unknown) => {
       const runtime = await rpc("settings.setAppIconPreference", { preference });
       await DesktopHost.setAppIcon(String(preference));
       return runtime;
     },
   },
-  updates: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`updates.${String(name)}`) }),
+  updates: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`updates.${String(name)}`),
+    },
+  ),
   changes: {
     plan: (project: string, manifest: unknown, includeHome: boolean) =>
       rpc("changes.plan", { project, manifest, includeHome }),
@@ -184,9 +199,33 @@ const mygoDesktopApi = {
     clearIndex: (workspaceId?: string) => rpc("sessions.clearIndex", { workspaceId }),
     setIndexEnabled: (enabled: boolean) => rpc("sessions.setIndexEnabled", { value: enabled }),
   },
-  skills: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`skills.${String(name)}`) }),
-  mcp: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`mcp.${String(name)}`) }),
-  insights: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`insights.${String(name)}`) }),
+  skills: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`skills.${String(name)}`),
+    },
+  ),
+  mcp: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`mcp.${String(name)}`),
+    },
+  ),
+  insights: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`insights.${String(name)}`),
+    },
+  ),
   workspace: {
     scan: (project: string) => rpc("workspace.scan", { project }),
     prepareManifest: (project: string) => rpc("workspace.prepareManifest", { project }),
@@ -200,8 +239,7 @@ const mygoDesktopApi = {
       rpc("workspace.refreshSessions", { workspaceId: id, force: force ?? false }),
     sessionEvents: (id: string, cursor?: string, limit?: number) =>
       rpc("session.events", { sessionId: id, cursor, limit }),
-    sourceCapability: (sessionId: string) =>
-      rpc("sessions.sourceCapability", { sessionId }),
+    sourceCapability: (sessionId: string) => rpc("sessions.sourceCapability", { sessionId }),
     nativeImports: (workspaceId: string) => rpc("sessions.nativeImports", { workspaceId }),
     doctorSummaries: (ids: string[]) => rpc("workspace.doctorSummaries", { workspaceIds: ids }),
     add: (path: string) => rpc("workspace.add", { path }),
@@ -214,8 +252,24 @@ const mygoDesktopApi = {
   remote: {
     request: (request: RemoteRequest) => rpc("remote.request", request),
   },
-  claude: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`claude.${String(name)}`) }),
-  web: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`web.${String(name)}`) }),
+  claude: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`claude.${String(name)}`),
+    },
+  ),
+  web: new Proxy(
+    {},
+    {
+      get:
+        (_target, name) =>
+        (...args: unknown[]) =>
+          unsupported(`web.${String(name)}`),
+    },
+  ),
 } as unknown as DesktopApi;
 
 export function mygoDesktop(): DesktopApi {
