@@ -1,0 +1,15 @@
+{
+  "name": "AgentKib MyGo",
+  "identifier": "ai.agentkib.mygo",
+  "version": "0.1.0",
+  "main": ".",
+  "frontendDist": "../dist",
+  "out": "build",
+  "macos": {
+    "minimumSystemVersion": "13.3",
+    "signingIdentity": "-"
+  },
+  "linux": {
+    "maintainer": "AgentKib"
+  }
+}

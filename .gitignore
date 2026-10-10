@@ -3,6 +3,7 @@ node_modules/
 /dist-backend/
 /build/
 /.mygo/
+**/.mygo/
 mygo_windows_*.syso
 .cache/node-runtime/
 resources/darwin-*/runtime/
