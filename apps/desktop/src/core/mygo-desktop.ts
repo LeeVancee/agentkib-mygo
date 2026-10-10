@@ -100,13 +100,44 @@ const mygoDesktopApi = {
     setAppIconPreference: (preference: unknown) => rpc("settings.setAppIconPreference", { preference }),
   },
   updates: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`updates.${String(name)}`) }),
-  changes: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`changes.${String(name)}`) }),
-  memories: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`memories.${String(name)}`) }),
-  sessions: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`sessions.${String(name)}`) }),
+  changes: {
+    plan: (project: string, manifest: unknown, includeHome: boolean) =>
+      rpc("changes.plan", { project, manifest, includeHome }),
+    apply: (changeSet: unknown, approveHome: boolean, launchRequest?: unknown) =>
+      rpc("changes.apply", { changeSet, approveHome, launchRequest }),
+  },
+  memories: {
+    list: (project: string, status?: string) => rpc("memories.list", { project, status }),
+    search: (project: string, query: string, limit?: number) =>
+      rpc("memories.search", { project, query, limit: limit ?? 50 }),
+    propose: (project: string, proposal: unknown) => rpc("memories.propose", { project, proposal }),
+    review: (id: string, status: string, editedContent?: string) =>
+      rpc("memories.review", { id, status, editedContent }),
+  },
+  sessions: {
+    clearIndex: (workspaceId?: string) => rpc("sessions.clearIndex", { workspaceId }),
+    setIndexEnabled: (enabled: boolean) => rpc("sessions.setIndexEnabled", { value: enabled }),
+  },
   skills: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`skills.${String(name)}`) }),
   mcp: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`mcp.${String(name)}`) }),
   insights: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`insights.${String(name)}`) }),
-  workspace: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`workspace.${String(name)}`) }),
+  workspace: {
+    scan: (project: string) => rpc("workspace.scan", { project }),
+    prepareManifest: (project: string) => rpc("workspace.prepareManifest", { project }),
+    resolveContext: (project: string, cwd: string, agent: string) =>
+      rpc("workspace.resolveContext", { project, cwd, agent }),
+    exclude: (id: string) => rpc("workspace.exclude", { id }),
+    restoreExcluded: (path: string) => rpc("workspace.restoreExcluded", { path }),
+    sessions: (id: string) => rpc("workspace.sessions", { id }),
+    sessionStatus: (id: string) => rpc("workspace.sessionStatus", { id }),
+    refreshSessions: (id: string, force?: boolean) => rpc("workspace.refreshSessions", { id, force }),
+    sessionEvents: (id: string, cursor?: string, limit?: number) =>
+      rpc("session.events", { id, cursor, limit }),
+    doctorSummaries: (ids: string[]) => rpc("workspace.doctorSummaries", { workspaceIds: ids }),
+    add: (path: string) => unsupported(`workspace.add(${path})`),
+    refresh: (id: string) => unsupported(`workspace.refresh(${id})`),
+    doctorReport: (id: string) => rpc("workspace.doctorReport", { id }),
+  },
   remote: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`remote.${String(name)}`) }),
   claude: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`claude.${String(name)}`) }),
   web: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`web.${String(name)}`) }),
