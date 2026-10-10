@@ -1,0 +1,55 @@
+name: Linux TypeScript Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ubuntu-arm64:
+    name: Typecheck on Ubuntu ARM64
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - name: Build backend and stage native bindings
+        run: pnpm --filter @agentkib/desktop backend:build
+
+  fedora-x64:
+    name: Typecheck on Fedora x64
+    runs-on: ubuntu-24.04
+    container: fedora:42
+    timeout-minutes: 20
+    steps:
+      - name: Install required system tools
+        run: dnf install -y git curl tar gzip xz gcc gcc-c++ make python3 procps-ng
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Set up pnpm
+        run: |
+          pnpm_version=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).packageManager.replace(/^pnpm@/, '')")
+          npm install --global "pnpm@$pnpm_version"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - name: Build backend and stage native bindings
+        run: pnpm --filter @agentkib/desktop backend:build
