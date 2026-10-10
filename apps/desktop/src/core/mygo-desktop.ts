@@ -1,4 +1,10 @@
 import type { DesktopApi, DesktopRuntimeStatus } from "../../electron/api";
+import type {
+  DiscoveryPlan,
+  DiscoverySnapshot,
+  InspectedWorkspace,
+  NativeContext,
+} from "@agentkib/backend/migration";
 import { Backend, DesktopHost } from "@/mygo";
 
 type Rpc = <T = unknown>(method: string, params?: unknown) => Promise<T>;
@@ -66,7 +72,54 @@ const home: DesktopApi["home"] = {
   refreshStorage: () => rpc("storage.refresh", { force: true }),
   openStoragePath: (workspaceId, relativePath) => rpc("storage.resolvePath", { workspaceId, relativePath }),
   cancelStorage: () => rpc("storage.cancel"),
-  refreshDiscovery: () => rpc("discovery.refresh", { force: true }),
+  refreshDiscovery: async () => {
+    const queuedAt = new Date().toISOString().replace(".000Z", "Z");
+    const startedAt = new Date().toISOString().replace(".000Z", "Z");
+    const roots = await rpc<Array<{ path: string; enabled: boolean; max_depth: number }>>(
+      "discovery.listScanRoots",
+      {},
+    );
+    const enabledRoots = roots
+      .filter((root) => root.enabled)
+      .map((root) => ({ path: root.path, max_depth: root.max_depth }));
+    const [scanRoots, configured] = await Promise.all([
+      rpc<Pick<DiscoverySnapshot, "candidates" | "errors" | "source_diagnostics">>(
+        "backend.nativeScanRootDiscovery",
+        { roots: enabledRoots },
+      ),
+      rpc<
+        Pick<
+          DiscoverySnapshot,
+          | "candidates"
+          | "errors"
+          | "source_diagnostics"
+          | "home_assets"
+          | "installations"
+          | "non_workspace_paths"
+        >
+      >("backend.nativeConfiguredDiscovery", {}),
+    ]);
+    const snapshot: DiscoverySnapshot = {
+      non_workspace_paths: configured.non_workspace_paths,
+      candidates: [...scanRoots.candidates, ...configured.candidates],
+      installations: configured.installations,
+      home_assets: configured.home_assets,
+      errors: [...scanRoots.errors, ...configured.errors],
+      source_diagnostics: [...scanRoots.source_diagnostics, ...configured.source_diagnostics],
+    };
+    const context = await rpc<NativeContext>("backend.nativeContext", {});
+    const plan = await rpc<DiscoveryPlan>("backend.planDiscovery", { snapshot, context });
+    const inspections = await rpc<InspectedWorkspace[]>("backend.inspectWorkspaces", {
+      workspaces: plan.workspaces.map(({ id, path }) => ({ id, path })),
+    });
+    return rpc("discovery.refresh", {
+      _plan: plan,
+      _snapshot: snapshot,
+      _inspections: inspections,
+      _queuedAt: queuedAt,
+      _startedAt: startedAt,
+    });
+  },
   refreshInsights: () => rpc("insights.refresh", { force: true }),
   updateOnboarding: (event) => rpc("onboarding.update", { event }),
   openObsidian: () => unsupported("home.openObsidian"),
