@@ -245,6 +245,9 @@ importers:
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.2.8)
+      mygo-runtime:
+        specifier: 0.4.0
+        version: 0.4.0
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -3673,6 +3676,9 @@ packages:
     resolution: {integrity: sha512-2eznPJP8z2BFLX50tf0LuODrpINqP1RVIm/CObbTcBRITQgmC/TjcREF1NeTBzIcR5XO/ukWo+YHOjBbFwIupg==}
     hasBin: true
 
+  mygo-runtime@0.4.0:
+    resolution: {integrity: sha512-HRtGqqQI5xfEURjptdkJM89arot3UeOFwwHbUPTCO6eDLPD7zYfvVLMm70C7bBDjxrETw1On/7yp3rerPIZtVw==}
+
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -5770,7 +5776,7 @@ snapshots:
   '@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(rolldown@1.2.5)(vite@8.2.2(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@10.2.2)
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       rolldown: 1.2.5
     optionalDependencies:
       '@babel/runtime': 7.29.7
@@ -5780,7 +5786,7 @@ snapshots:
   '@rolldown/plugin-babel@0.2.3(@babel/core@7.29.7(supports-color@10.2.2))(@babel/runtime@7.29.7)(rolldown@1.2.5)(vite@8.3.4(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@10.2.2)
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       rolldown: 1.2.5
     optionalDependencies:
       '@babel/runtime': 7.29.7
@@ -8169,6 +8175,8 @@ snapshots:
     dependencies:
       dns-packet: 5.6.1
       thunky: 1.1.0
+
+  mygo-runtime@0.4.0: {}
 
   nanoid@3.3.18: {}
 

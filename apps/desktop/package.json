@@ -51,6 +51,7 @@
     "i18next": "^25.5.2",
     "koffi": "^2.15.1",
     "lucide-react": "^0.468.0",
+    "mygo-runtime": "0.4.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

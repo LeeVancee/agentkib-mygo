@@ -16,3 +16,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - vite@8.3.4
+  - mygo-runtime@0.4.0

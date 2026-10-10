@@ -56,6 +56,9 @@ func main() {
 		log.Fatal(err)
 	}
 	mygo.SetFrontend(os.DirFS(frontend))
+	backend := &Backend{dataDir: os.Getenv("AGENTKIB_DATA_DIR")}
+	mygo.Bind(backend)
+	mygo.App.OnQuit(func() { _ = backend.Close() })
 
 	mygo.App.WhenReady(func() {
 		preloadScript := ""

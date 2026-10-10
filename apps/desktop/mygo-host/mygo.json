@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "main": ".",
   "frontendDist": "../dist",
+  "bindings": "../src/mygo.ts",
   "out": "build",
   "macos": {
     "minimumSystemVersion": "13.3",
