@@ -7,6 +7,7 @@ node_modules/
 **/build/
 /.mygo/
 **/.mygo/
+apps/desktop/mygo-host/resources/
 mygo_windows_*.syso
 .cache/node-runtime/
 resources/darwin-*/runtime/

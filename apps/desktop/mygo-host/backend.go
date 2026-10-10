@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -74,6 +75,9 @@ func (b *Backend) ensureStartedLocked() error {
 	if b.dataDir != "" {
 		cmd.Env = append(cmd.Env, "AGENTKIB_DATA_DIR="+b.dataDir)
 	}
+	if sidecar := resolveQuotaSidecar(); sidecar != "" {
+		cmd.Env = append(cmd.Env, "AGENTKIB_QUOTA_SIDECAR="+sidecar)
+	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -98,6 +102,45 @@ func (b *Backend) ensureStartedLocked() error {
 	}
 	_, err = b.requestLocked("backend.initialize", map[string]any{"dataDir": b.dataDir})
 	return err
+}
+
+func resolveQuotaSidecar() string {
+	name := "agentkib-quota-sidecar"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	candidates := []string{}
+	if configured := os.Getenv("AGENTKIB_QUOTA_SIDECAR"); configured != "" {
+		candidates = append(candidates, configured)
+	}
+	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
+		candidates = append(candidates, filepath.Join(resources, "quota", name))
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates,
+			filepath.Join(cwd, "build", "quota", name),
+			filepath.Join(cwd, "../build/quota", name),
+			filepath.Join(cwd, "../../build/quota", name),
+		)
+	}
+	if executable, err := os.Executable(); err == nil {
+		executableDir := filepath.Dir(executable)
+		candidates = append(candidates,
+			filepath.Join(executableDir, "../Resources/quota", name),
+			filepath.Join(executableDir, "../resources/quota", name),
+			filepath.Join(executableDir, "quota", name),
+		)
+	}
+	for _, candidate := range candidates {
+		absolute, err := filepath.Abs(candidate)
+		if err != nil {
+			continue
+		}
+		if info, err := os.Stat(absolute); err == nil && !info.IsDir() {
+			return absolute
+		}
+	}
+	return ""
 }
 
 func (b *Backend) requestLocked(method string, params any) (any, error) {
