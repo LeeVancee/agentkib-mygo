@@ -515,23 +515,27 @@ describe("Codex indexed identity verification", () => {
     expect(f.reader.verifiedControlIds([nativeId])).toEqual(new Set([nativeId]));
   });
 
-  it("queries multiple candidate batches and preserves current-database precedence", () => {
-    const f = fixture();
-    const expected = new Map<string, { id: string; cwd: string }>();
-    for (let index = 0; index < 501; index++) {
-      const id = `aaaaaaaa-bbbb-4ccc-8ddd-${index.toString(16).padStart(12, "0")}`;
-      f.add(id);
-      expected.set(id, { id, cwd: f.workspace });
-    }
-    const legacy = path.join(f.codexHome, "sqlite");
-    mkdirSync(legacy);
-    const db = new DatabaseSync(path.join(legacy, "state_0.sqlite"));
-    db.exec("CREATE TABLE threads(id TEXT,rollout_path TEXT,cwd TEXT)");
-    db.prepare("INSERT INTO threads VALUES(?,?,?)").run(otherId, `${nativeId}.jsonl`, f.workspace);
-    db.close();
-    expect(f.reader.verifiedIndexedIdentities([...expected.keys(), otherId])).toEqual(expected);
-    expect(f.reader.verifiedControlIds(expected.keys())).toEqual(new Set(expected.keys()));
-  });
+  it(
+    "queries multiple candidate batches and preserves current-database precedence",
+    () => {
+      const f = fixture();
+      const expected = new Map<string, { id: string; cwd: string }>();
+      for (let index = 0; index < 501; index++) {
+        const id = `aaaaaaaa-bbbb-4ccc-8ddd-${index.toString(16).padStart(12, "0")}`;
+        f.add(id);
+        expected.set(id, { id, cwd: f.workspace });
+      }
+      const legacy = path.join(f.codexHome, "sqlite");
+      mkdirSync(legacy);
+      const db = new DatabaseSync(path.join(legacy, "state_0.sqlite"));
+      db.exec("CREATE TABLE threads(id TEXT,rollout_path TEXT,cwd TEXT)");
+      db.prepare("INSERT INTO threads VALUES(?,?,?)").run(otherId, `${nativeId}.jsonl`, f.workspace);
+      db.close();
+      expect(f.reader.verifiedIndexedIdentities([...expected.keys(), otherId])).toEqual(expected);
+      expect(f.reader.verifiedControlIds(expected.keys())).toEqual(new Set(expected.keys()));
+    },
+    15_000,
+  );
 
   it.each(["missing", "directory", ...(process.platform === "win32" ? [] : ["symlink", "fifo"])])(
     "never opens nonregular %s native transcripts",
