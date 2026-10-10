@@ -3,6 +3,7 @@
   "identifier": "ai.agentkib",
   "version": "0.17.0",
   "copyright": "© 2026 AgentKib contributors",
+  "icon": "../resources/icons/icon.png",
   "main": ".",
   "frontendDist": "../dist",
   "bindings": "../src/mygo.ts",
