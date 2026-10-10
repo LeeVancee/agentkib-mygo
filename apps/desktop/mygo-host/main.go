@@ -61,8 +61,11 @@ func main() {
 	mygo.App.OnQuit(func() { _ = backend.Close() })
 
 	mygo.App.WhenReady(func() {
+		if backend.dataDir == "" {
+			backend.dataDir, _ = mygo.App.Path(mygo.PathUserData)
+		}
 		preloadScript := ""
-		if os.Getenv("MYGO_ENV") == "development" {
+		if os.Getenv("AGENTKIB_MYGO_COMPAT_SHIM") == "1" {
 			preloadScript = rendererBootstrapScript
 		}
 		mygo.NewWindow(mygo.WindowOptions{

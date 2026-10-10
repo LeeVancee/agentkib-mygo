@@ -10,7 +10,7 @@ import { call } from "mygo-runtime";
  * still in progress; feature-specific typed calls will be layered on later.
  */
 export const Backend = {
-  call(method: string, params: Record<string, unknown>): Promise<unknown> {
+  call(method: string, params: unknown): Promise<unknown> {
     return call("Backend.Call", method, params);
   },
   close(): Promise<void> {

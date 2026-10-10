@@ -42,7 +42,7 @@ type rpcError struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (b *Backend) Call(ctx context.Context, method string, params map[string]any) (any, error) {
+func (b *Backend) Call(ctx context.Context, method string, params any) (any, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

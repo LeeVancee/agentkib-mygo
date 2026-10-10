@@ -1,9 +1,7 @@
 import type { DesktopApi } from "../../electron/api";
+import { mygoDesktop } from "./mygo-desktop";
 
 export function desktopApi(): DesktopApi {
   const desktop = globalThis.window?.agentkibDesktop;
-  if (!desktop) {
-    throw new Error("Electron preload bridge is unavailable");
-  }
-  return desktop;
+  return desktop ?? mygoDesktop();
 }
