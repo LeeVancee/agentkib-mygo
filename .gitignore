@@ -11,6 +11,8 @@ apps/desktop/release-electron/
 /.mygo/
 **/.mygo/
 apps/desktop/mygo-host/resources/
+**/.tanstack/
+*.tsbuildinfo
 mygo_windows_*.syso
 .cache/node-runtime/
 resources/darwin-*/runtime/
