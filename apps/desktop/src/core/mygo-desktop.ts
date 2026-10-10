@@ -1,5 +1,5 @@
 import type { DesktopApi, DesktopRuntimeStatus } from "../../electron/api";
-import { Backend } from "@/mygo";
+import { Backend, DesktopHost } from "@/mygo";
 
 type Rpc = <T = unknown>(method: string, params?: unknown) => Promise<T>;
 
@@ -90,7 +90,15 @@ const mygoDesktopApi = {
   benchmark: { mark: () => Promise.resolve() },
   home,
   account: { request: () => unsupported("account.request"), onStatus: () => unsubscribe },
-  shell: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`shell.${String(name)}`) }),
+  shell: {
+    openDirectory: (title?: string) =>
+      DesktopHost.openDirectory(title ?? "").then((path) => path || undefined),
+    openExternal: (url: string) => DesktopHost.openExternal(url),
+    openFilesAndFoldersSettings: () => DesktopHost.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders"),
+    openQuotaDashboard: () => Promise.resolve(),
+    hideWindow: () => DesktopHost.hideWindow(),
+    quit: () => DesktopHost.quit(),
+  },
   settings: {
     setCloseBehavior: (value: unknown) => rpc("settings.setCloseBehavior", { value }),
     setLocale: (preference: unknown) => rpc("settings.setLocale", { preference }),
@@ -134,8 +142,8 @@ const mygoDesktopApi = {
     sessionEvents: (id: string, cursor?: string, limit?: number) =>
       rpc("session.events", { id, cursor, limit }),
     doctorSummaries: (ids: string[]) => rpc("workspace.doctorSummaries", { workspaceIds: ids }),
-    add: (path: string) => unsupported(`workspace.add(${path})`),
-    refresh: (id: string) => unsupported(`workspace.refresh(${id})`),
+    add: (path: string) => rpc("workspace.add", { path }),
+    refresh: (id: string) => rpc("workspace.refresh", { id }),
     doctorReport: (id: string) => rpc("workspace.doctorReport", { id }),
   },
   remote: new Proxy({}, { get: (_target, name) => (...args: unknown[]) => unsupported(`remote.${String(name)}`) }),

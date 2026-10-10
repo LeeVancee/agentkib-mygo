@@ -17,3 +17,25 @@ export const Backend = {
     return call("Backend.Close");
   },
 } as const;
+
+/**
+ * DesktopHost exposes the native shell operations previously provided by
+ * Electron IPC.
+ */
+export const DesktopHost = {
+  hideWindow(): Promise<void> {
+    return call("DesktopHost.HideWindow");
+  },
+  openDirectory(title: string): Promise<string> {
+    return call("DesktopHost.OpenDirectory", title);
+  },
+  openExternal(url: string): Promise<void> {
+    return call("DesktopHost.OpenExternal", url);
+  },
+  openPath(path: string): Promise<void> {
+    return call("DesktopHost.OpenPath", path);
+  },
+  quit(): Promise<void> {
+    return call("DesktopHost.Quit");
+  },
+} as const;

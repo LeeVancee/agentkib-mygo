@@ -9,6 +9,42 @@ import (
 	"github.com/egoist/mygo"
 )
 
+// DesktopHost exposes the native shell operations previously provided by
+// Electron IPC.
+type DesktopHost struct {
+	window *mygo.Window
+}
+
+func (h *DesktopHost) OpenDirectory(title string) (string, error) {
+	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+		Parent:    h.window,
+		Title:     title,
+		Directory: true,
+	})
+	if err != nil || len(paths) == 0 {
+		return "", err
+	}
+	return paths[0], nil
+}
+
+func (DesktopHost) OpenExternal(url string) error {
+	return mygo.Shell.OpenExternal(url)
+}
+
+func (DesktopHost) OpenPath(path string) error {
+	return mygo.Shell.OpenPath(path)
+}
+
+func (h *DesktopHost) HideWindow() {
+	if h.window != nil {
+		h.window.Hide()
+	}
+}
+
+func (DesktopHost) Quit() {
+	mygo.App.Quit()
+}
+
 const rendererBootstrapScript = `(function () {
   const unsubscribe = () => {};
   const eventApi = {
@@ -57,7 +93,9 @@ func main() {
 	}
 	mygo.SetFrontend(os.DirFS(frontend))
 	backend := &Backend{dataDir: os.Getenv("AGENTKIB_DATA_DIR")}
+	desktop := &DesktopHost{}
 	mygo.Bind(backend)
+	mygo.Bind(desktop)
 	mygo.App.OnQuit(func() { _ = backend.Close() })
 
 	mygo.App.WhenReady(func() {
@@ -68,7 +106,7 @@ func main() {
 		if os.Getenv("AGENTKIB_MYGO_COMPAT_SHIM") == "1" {
 			preloadScript = rendererBootstrapScript
 		}
-		mygo.NewWindow(mygo.WindowOptions{
+		desktop.window = mygo.NewWindow(mygo.WindowOptions{
 			Title:                "AgentKib",
 			Width:                1360,
 			Height:               860,
