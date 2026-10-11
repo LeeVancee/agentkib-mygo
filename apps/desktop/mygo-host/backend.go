@@ -67,7 +67,7 @@ func (b *Backend) ensureStartedLocked() error {
 	}
 	node := os.Getenv("AGENTKIB_NODE_PATH")
 	if node == "" {
-		node = "node"
+		node = resolveNodePath()
 	}
 	cmd := exec.Command(node, entry)
 	cmd.Dir = filepath.Dir(entry)
@@ -102,6 +102,27 @@ func (b *Backend) ensureStartedLocked() error {
 	}
 	_, err = b.requestLocked("backend.initialize", map[string]any{"dataDir": b.dataDir})
 	return err
+}
+
+func resolveNodePath() string {
+	candidates := []string{}
+	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
+		candidates = append(candidates, filepath.Join(resources, "node"))
+	}
+	if executable, err := os.Executable(); err == nil {
+		executableDir := filepath.Dir(executable)
+		candidates = append(candidates, filepath.Join(executableDir, "../Resources/node"))
+	}
+	for _, candidate := range candidates {
+		absolute, err := filepath.Abs(candidate)
+		if err != nil {
+			continue
+		}
+		if info, err := os.Stat(absolute); err == nil && !info.IsDir() {
+			return absolute
+		}
+	}
+	return "node"
 }
 
 func resolveQuotaSidecar() string {

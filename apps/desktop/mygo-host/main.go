@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/egoist/mygo"
 )
@@ -166,11 +167,13 @@ const rendererBootstrapScript = `(function () {
 })();`
 
 func main() {
-	frontend, err := resolveFrontend()
-	if err != nil {
-		log.Fatal(err)
+	if mygo.IsDev() {
+		frontend, err := resolveFrontend()
+		if err != nil {
+			log.Fatal(err)
+		}
+		mygo.SetFrontend(os.DirFS(frontend))
 	}
-	mygo.SetFrontend(os.DirFS(frontend))
 	backend := &Backend{dataDir: os.Getenv("AGENTKIB_DATA_DIR")}
 	desktop := &DesktopHost{}
 	mygo.Bind(backend)
@@ -178,6 +181,7 @@ func main() {
 	mygo.App.OnQuit(func() { _ = backend.Close() })
 
 	mygo.App.WhenReady(func() {
+		setSystemLocale()
 		if backend.dataDir == "" {
 			backend.dataDir, _ = mygo.App.Path(mygo.PathUserData)
 		}
@@ -204,6 +208,23 @@ func main() {
 
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func setSystemLocale() {
+	if _, ok := os.LookupEnv("AGENTKIB_LOCALE"); ok {
+		return
+	}
+	locale := strings.ToLower(strings.ReplaceAll(mygo.App.Locale(), "_", "-"))
+	switch {
+	case strings.HasPrefix(locale, "zh-hant"), strings.HasPrefix(locale, "zh-tw"), strings.HasPrefix(locale, "zh-hk"), strings.HasPrefix(locale, "zh-mo"):
+		_ = os.Setenv("AGENTKIB_LOCALE", "zh-TW")
+	case strings.HasPrefix(locale, "zh-hans"), strings.HasPrefix(locale, "zh-cn"), strings.HasPrefix(locale, "zh-sg"), locale == "zh":
+		_ = os.Setenv("AGENTKIB_LOCALE", "zh-CN")
+	case locale == "ja" || strings.HasPrefix(locale, "ja-"):
+		_ = os.Setenv("AGENTKIB_LOCALE", "ja-JP")
+	default:
+		_ = os.Setenv("AGENTKIB_LOCALE", "en-US")
 	}
 }
 
