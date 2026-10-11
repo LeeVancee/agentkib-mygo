@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,23 +12,22 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-
-	"github.com/egoist/mygo"
 )
 
 const runtimeProtocolVersion = 17
 
-// Backend keeps the existing TypeScript runtime behind a small MyGo binding.
+// Backend keeps the existing TypeScript runtime behind a small Wails binding.
 // The public method is intentionally generic while the renderer migration is
 // still in progress; feature-specific typed calls will be layered on later.
 type Backend struct {
-	mu      sync.Mutex
-	process *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  *bufio.Scanner
-	nextID  atomic.Uint64
-	dataDir string
-	started bool
+	mu          sync.Mutex
+	process     *exec.Cmd
+	stdin       io.WriteCloser
+	stdout      *bufio.Scanner
+	nextID      atomic.Uint64
+	dataDir     string
+	resourceDir string
+	started     bool
 }
 
 type rpcResponse struct {
@@ -45,10 +43,7 @@ type rpcError struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (b *Backend) Call(ctx context.Context, method string, params any) (any, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
+func (b *Backend) Call(method string, params any) (any, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if err := b.ensureStartedLocked(); err != nil {
@@ -61,7 +56,7 @@ func (b *Backend) ensureStartedLocked() error {
 	if b.started {
 		return nil
 	}
-	entry, err := resolveBackendEntry()
+	entry, err := b.resolveBackendEntry()
 	if err != nil {
 		return err
 	}
@@ -71,11 +66,15 @@ func (b *Backend) ensureStartedLocked() error {
 	}
 	cmd := exec.Command(node, entry)
 	cmd.Dir = filepath.Dir(entry)
-	cmd.Env = append(os.Environ(), "AGENTKIB_APP_FLAVOR=ai.agentkib.mygo")
+	appFlavor := os.Getenv("AGENTKIB_APP_FLAVOR")
+	if appFlavor == "" {
+		appFlavor = "ai.agentkib.wails"
+	}
+	cmd.Env = append(os.Environ(), "AGENTKIB_APP_FLAVOR="+appFlavor)
 	if b.dataDir != "" {
 		cmd.Env = append(cmd.Env, "AGENTKIB_DATA_DIR="+b.dataDir)
 	}
-	if sidecar := resolveQuotaSidecar(); sidecar != "" {
+	if sidecar := b.resolveQuotaSidecar(); sidecar != "" {
 		cmd.Env = append(cmd.Env, "AGENTKIB_QUOTA_SIDECAR="+sidecar)
 	}
 	stdin, err := cmd.StdinPipe()
@@ -96,7 +95,7 @@ func (b *Backend) ensureStartedLocked() error {
 	b.stdout.Buffer(make([]byte, 4096), 16*1024*1024)
 	if _, err := b.requestLocked("agentkib.handshake", map[string]any{
 		"protocolVersion": runtimeProtocolVersion,
-		"client":          map[string]string{"name": "agentkib-mygo", "version": "0.1.0"},
+		"client":          map[string]string{"name": "agentkib-wails", "version": "0.1.0"},
 	}); err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func (b *Backend) ensureStartedLocked() error {
 	return err
 }
 
-func resolveQuotaSidecar() string {
+func (b *Backend) resolveQuotaSidecar() string {
 	name := "agentkib-quota-sidecar"
 	if runtime.GOOS == "windows" {
 		name += ".exe"
@@ -113,8 +112,11 @@ func resolveQuotaSidecar() string {
 	if configured := os.Getenv("AGENTKIB_QUOTA_SIDECAR"); configured != "" {
 		candidates = append(candidates, configured)
 	}
-	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
-		candidates = append(candidates, filepath.Join(resources, "quota", name))
+	if resourceDir := b.resourceDir; resourceDir != "" {
+		candidates = append(candidates,
+			filepath.Join(resourceDir, "resources", platformResourceName(), "quota", name),
+			filepath.Join(resourceDir, "quota", name),
+		)
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates,
@@ -195,7 +197,7 @@ func (b *Backend) Close() error {
 	return nil
 }
 
-func resolveBackendEntry() (string, error) {
+func (b *Backend) resolveBackendEntry() (string, error) {
 	candidates := []string{}
 	if configured := os.Getenv("AGENTKIB_BACKEND_ENTRY"); configured != "" {
 		candidates = append(candidates, configured)
@@ -203,8 +205,8 @@ func resolveBackendEntry() (string, error) {
 	if cwd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, filepath.Join(cwd, "../dist-electron/backend.cjs"), filepath.Join(cwd, "../../dist-electron/backend.cjs"))
 	}
-	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
-		candidates = append(candidates, filepath.Join(resources, "dist-electron", "backend.cjs"))
+	if resourceDir := b.resourceDir; resourceDir != "" {
+		candidates = append(candidates, filepath.Join(resourceDir, "dist-electron", "backend.cjs"))
 	}
 	if executable, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(executable), "../dist-electron/backend.cjs"))
@@ -219,4 +221,22 @@ func resolveBackendEntry() (string, error) {
 		}
 	}
 	return "", fmt.Errorf("AgentKib TypeScript backend not found; set AGENTKIB_BACKEND_ENTRY")
+}
+
+func (b *Backend) appIconPreference() string {
+	data, err := os.ReadFile(filepath.Join(b.dataDir, "preferences.json"))
+	if err != nil {
+		return "white"
+	}
+	var preferences struct {
+		AppIconPreference string `json:"app_icon_preference"`
+	}
+	if json.Unmarshal(data, &preferences) == nil && preferences.AppIconPreference == "black" {
+		return "black"
+	}
+	return "white"
+}
+
+func platformResourceName() string {
+	return runtime.GOOS + "-" + runtime.GOARCH
 }

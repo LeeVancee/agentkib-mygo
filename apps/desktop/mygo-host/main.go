@@ -1,20 +1,33 @@
 package main
 
 import (
-	"encoding/json"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 
-	"github.com/egoist/mygo"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// DesktopHost exposes the native shell operations previously provided by
-// Electron IPC.
+// Wails embeds the built frontend and the resources needed by the Node sidecar
+// into the desktop binary. Development can override both roots with env vars.
+//
+//go:embed all:frontend/dist all:dist-electron all:resources
+var embeddedAssets embed.FS
+
+const (
+	appName       = "AgentKib"
+	appIdentifier = "ai.agentkib"
+	appVersion    = "0.17.0"
+)
+
 type DesktopHost struct {
-	window *mygo.Window
+	app         *application.App
+	window      *application.WebviewWindow
+	resourceDir string
 }
 
 func (h *DesktopHost) SetAppIcon(preference string) error {
@@ -27,91 +40,31 @@ func (h *DesktopHost) SetAppIcon(preference string) error {
 		suffix = "-macos"
 	}
 	filename := fmt.Sprintf("app-icon-%s%s.png", preference, suffix)
-	for _, directory := range iconDirectories() {
-		data, err := os.ReadFile(filepath.Join(directory, filename))
-		if err != nil {
-			continue
-		}
-		if runtime.GOOS == "darwin" {
-			return mygo.App.Dock.SetIcon(data)
-		}
-		if h.window == nil {
-			return nil
-		}
-		return h.window.SetIcon(data)
-	}
-	return fmt.Errorf("application icon not found: %s", filename)
-}
-
-func iconDirectories() []string {
-	directories := []string{}
-	if resources, err := mygo.App.Path(mygo.PathResources); err == nil {
-		directories = append(directories, filepath.Join(resources, "icons"))
-	}
-	if cwd, err := os.Getwd(); err == nil {
-		directories = append(directories,
-			filepath.Join(cwd, "../resources/icons"),
-			filepath.Join(cwd, "../../resources/icons"),
-		)
-	}
-	if executable, err := os.Executable(); err == nil {
-		directories = append(directories,
-			filepath.Join(filepath.Dir(executable), "../resources/icons"),
-			filepath.Join(filepath.Dir(executable), "../../resources/icons"),
-		)
-	}
-	return uniquePaths(directories)
-}
-
-func uniquePaths(paths []string) []string {
-	seen := make(map[string]struct{}, len(paths))
-	result := make([]string, 0, len(paths))
-	for _, path := range paths {
-		absolute, err := filepath.Abs(path)
-		if err != nil {
-			continue
-		}
-		if _, ok := seen[absolute]; ok {
-			continue
-		}
-		seen[absolute] = struct{}{}
-		result = append(result, absolute)
-	}
-	return result
-}
-
-func (h *DesktopHost) appIconPreference(dataDir string) string {
-	data, err := os.ReadFile(filepath.Join(dataDir, "preferences.json"))
+	data, err := os.ReadFile(filepath.Join(h.resourceDir, "resources", "icons", filename))
 	if err != nil {
-		return "white"
+		return fmt.Errorf("read application icon %s: %w", filename, err)
 	}
-	var preferences struct {
-		AppIconPreference string `json:"app_icon_preference"`
-	}
-	if json.Unmarshal(data, &preferences) == nil && preferences.AppIconPreference == "black" {
-		return "black"
-	}
-	return "white"
+	h.app.SetIcon(data)
+	return nil
 }
 
 func (h *DesktopHost) OpenDirectory(title string) (string, error) {
-	paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
-		Parent:    h.window,
-		Title:     title,
-		Directory: true,
-	})
-	if err != nil || len(paths) == 0 {
-		return "", err
+	dialog := h.app.Dialog.OpenFile().
+		CanChooseFiles(false).
+		CanChooseDirectories(true).
+		SetTitle(title)
+	if h.window != nil {
+		dialog.AttachToWindow(h.window)
 	}
-	return paths[0], nil
+	return dialog.PromptForSingleSelection()
 }
 
-func (DesktopHost) OpenExternal(url string) error {
-	return mygo.Shell.OpenExternal(url)
+func (h *DesktopHost) OpenExternal(url string) error {
+	return h.app.Browser.OpenURL(url)
 }
 
-func (DesktopHost) OpenPath(path string) error {
-	return mygo.Shell.OpenPath(path)
+func (h *DesktopHost) OpenPath(path string) error {
+	return h.app.Env.OpenFileManager(path, false)
 }
 
 func (h *DesktopHost) HideWindow() {
@@ -120,118 +73,119 @@ func (h *DesktopHost) HideWindow() {
 	}
 }
 
-func (DesktopHost) Quit() {
-	mygo.App.Quit()
+func (h *DesktopHost) Quit() {
+	h.app.Quit()
 }
 
-const rendererBootstrapScript = `(function () {
-  const unsubscribe = () => {};
-  const eventApi = {
-    onWindowActivity: () => unsubscribe,
-    onQuitRequested: () => unsubscribe,
-    onThemeChanged: () => unsubscribe,
-    onRefreshState: () => unsubscribe,
-    onQuotaUpdated: () => unsubscribe,
-    onNavigate: () => unsubscribe,
-    onMenuCommand: () => unsubscribe,
-    onRuntimeStatus: (listener) => { listener({ state: "ready", restartCount: 0 }); return unsubscribe; },
-  };
-  const runtime = {
-    app_name: "AgentKib", app_version: "0.1.0", app_channel: "development", updates_enabled: false,
-    data_dir: "", database_path: "", mcp_package_root: "",
-    mcp_hub: { enabled: false, status: "disabled", servers: [], error: null },
-    mcp_network: { enabled: false, bind_address: "127.0.0.1", port: 0 },
-    locale_preference: "system", effective_locale: "en-US", theme_preference: "dark", effective_theme: "dark",
-    accent_theme_preference: "default", sidebar_width_preference: null, app_icon_preference: "default",
-    tray_available: false, session_index_enabled: false, local_auto_refresh_enabled: false,
-    quota_auto_refresh_enabled: false, quota_auto_refresh_prompt_seen: true,
-    onboarding: { version: 1, acknowledged_version: 0, doctor_completed: false, repairable_count: 0, repair_applied: false },
-  };
-  const fallback = (name) => {
-    if (["workspaces", "agentInstallations", "catalogAssets", "globalMemories", "activity", "remoteGateways", "scanRoots", "excludedWorkspaces", "refreshStatus", "doctorSummaries"].includes(name)) return Promise.resolve([]);
-    if (name === "runtime") return Promise.resolve(runtime);
-    return Promise.resolve(undefined);
-  };
-  const home = new Proxy({ runtime: () => Promise.resolve(runtime) }, { get(target, name) {
-    return target[name] || ((...args) => fallback(name));
-  }});
-  const section = () => new Proxy({}, { get(_target, name) { return (...args) => fallback(name); } });
-  globalThis.agentkibDesktop = {
-    platform: "darwin", events: eventApi, home,
-    runtime: { handshake: () => Promise.resolve({}), status: () => Promise.resolve({ state: "ready", restartCount: 0 }), retry: () => Promise.resolve() },
-    benchmark: { mark: () => Promise.resolve() },
-    account: { request: () => Promise.resolve({}), onStatus: () => unsubscribe },
-    shell: section(), settings: section(), updates: section(), changes: section(), memories: section(), sessions: section(), skills: section(), mcp: section(), insights: section(), workspace: section(), remote: section(), claude: section(), web: section(),
-  };
-})();`
-
 func main() {
-	frontend, err := resolveFrontend()
+	frontend, err := fs.Sub(embeddedAssets, "frontend/dist")
 	if err != nil {
 		log.Fatal(err)
 	}
-	mygo.SetFrontend(os.DirFS(frontend))
-	backend := &Backend{dataDir: os.Getenv("AGENTKIB_DATA_DIR")}
-	desktop := &DesktopHost{}
-	mygo.Bind(backend)
-	mygo.Bind(desktop)
-	mygo.App.OnQuit(func() { _ = backend.Close() })
 
-	mygo.App.WhenReady(func() {
-		if backend.dataDir == "" {
-			backend.dataDir, _ = mygo.App.Path(mygo.PathUserData)
+	resourceDir := os.Getenv("AGENTKIB_RESOURCE_ROOT")
+	cleanup := func() {}
+	if resourceDir == "" {
+		resourceDir, cleanup, err = materializeEmbeddedResources()
+		if err != nil {
+			log.Fatal(err)
 		}
-		preloadScript := ""
-		if os.Getenv("AGENTKIB_MYGO_COMPAT_SHIM") == "1" {
-			preloadScript = rendererBootstrapScript
-		}
-		desktop.window = mygo.NewWindow(mygo.WindowOptions{
-			Title:                "AgentKib",
-			Width:                1360,
-			Height:               860,
-			MinWidth:             1280,
-			MinHeight:            680,
-			BackgroundColor:      "#0a0a0a",
-			URL:                  "/",
-			Page:                 mygo.PageOptions{PreloadScript: preloadScript, DevTools: mygo.DevToolsAuto},
-			StateKey:             "main",
-			TitleBarStyle:        mygo.TitleBarHiddenInset,
-			TrafficLightPosition: &mygo.Point{X: 15, Y: 17},
-			TitleBarHeight:       52,
-		})
-		_ = desktop.SetAppIcon(desktop.appIconPreference(backend.dataDir))
+	}
+	defer cleanup()
+
+	dataDir := resolveDataDir()
+	backend := &Backend{dataDir: dataDir, resourceDir: resourceDir}
+	desktop := &DesktopHost{resourceDir: resourceDir}
+
+	app := application.New(application.Options{
+		Name:        appName,
+		Description: "Inspect, organize, and safely maintain coding-agent context.",
+		Services: []application.Service{
+			application.NewService(backend),
+			application.NewService(desktop),
+		},
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(frontend),
+		},
+		Mac: application.MacOptions{
+			ApplicationShouldTerminateAfterLastWindowClosed: true,
+		},
 	})
+	desktop.app = app
 
-	if err := mygo.App.Run(); err != nil {
+	desktop.window = app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:             "main",
+		Title:            appName,
+		Width:            1360,
+		Height:           860,
+		MinWidth:         1280,
+		MinHeight:        680,
+		BackgroundColour: application.NewRGB(10, 10, 10),
+		URL:              "/",
+		DevToolsEnabled:  os.Getenv("AGENTKIB_WAILS_DEVTOOLS") == "1",
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 52,
+			TitleBar:                application.MacTitleBarHiddenInset,
+		},
+	})
+	if preference := backend.appIconPreference(); preference != "" {
+		if err := desktop.SetAppIcon(preference); err != nil {
+			log.Printf("set application icon: %v", err)
+		}
+	}
+
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func resolveFrontend() (string, error) {
-	candidates := []string{}
-	if configured := os.Getenv("AGENTKIB_MYGO_FRONTEND_DIST"); configured != "" {
-		candidates = append(candidates, configured)
+func resolveDataDir() string {
+	if configured := os.Getenv("AGENTKIB_DATA_DIR"); configured != "" {
+		return configured
 	}
-	workingDirectory, err := os.Getwd()
-	if err == nil {
-		candidates = append(candidates,
-			filepath.Join(workingDirectory, "../dist"),
-			filepath.Join(workingDirectory, "apps/desktop/dist"),
-		)
+	base, err := os.UserConfigDir()
+	if err != nil {
+		return filepath.Join(os.TempDir(), appIdentifier)
 	}
-	if executable, err := os.Executable(); err == nil {
-		executableDirectory := filepath.Dir(executable)
-		candidates = append(candidates, filepath.Join(executableDirectory, "../dist"))
-	}
+	return filepath.Join(base, appIdentifier)
+}
 
-	for _, candidate := range candidates {
-		absolute, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		if info, err := os.Stat(filepath.Join(absolute, "index.html")); err == nil && !info.IsDir() {
-			return absolute, nil
-		}
+func materializeEmbeddedResources() (string, func(), error) {
+	root, err := os.MkdirTemp("", "agentkib-wails3-resources-")
+	if err != nil {
+		return "", nil, err
 	}
-	return "", fmt.Errorf("AgentKib frontend dist not found; set AGENTKIB_MYGO_FRONTEND_DIST")
+	cleanup := func() { _ = os.RemoveAll(root) }
+
+	err = fs.WalkDir(embeddedAssets, "dist-electron", func(path string, entry fs.DirEntry, walkErr error) error {
+		return materializeEmbeddedEntry(root, path, entry, walkErr)
+	})
+	if err == nil {
+		err = fs.WalkDir(embeddedAssets, "resources", func(path string, entry fs.DirEntry, walkErr error) error {
+			return materializeEmbeddedEntry(root, path, entry, walkErr)
+		})
+	}
+	if err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	return root, cleanup, nil
+}
+
+func materializeEmbeddedEntry(root, path string, entry fs.DirEntry, walkErr error) error {
+	if walkErr != nil {
+		return walkErr
+	}
+	if entry.IsDir() {
+		return os.MkdirAll(filepath.Join(root, filepath.FromSlash(path)), 0o755)
+	}
+	data, err := fs.ReadFile(embeddedAssets, path)
+	if err != nil {
+		return err
+	}
+	target := filepath.Join(root, filepath.FromSlash(path))
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(target, data, 0o755)
 }

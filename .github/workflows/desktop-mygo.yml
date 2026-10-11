@@ -1,4 +1,4 @@
-name: Desktop MyGo packages
+name: Desktop Wails preview builds
 
 on:
   workflow_dispatch:
@@ -15,18 +15,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS
+          - name: macOS arm64
             os: macos-14
-            platform: darwin/arm64,darwin/amd64
-            artifact: agentkib-macos
-          - name: Windows
+            artifact: agentkib-macos-arm64
+          - name: Windows x64
+            os: windows-2022
+            artifact: agentkib-windows-x64
+          - name: Linux x64
             os: ubuntu-24.04
-            platform: windows/amd64
-            artifact: agentkib-windows
-          - name: Linux
-            os: ubuntu-24.04
-            platform: linux/amd64
-            artifact: agentkib-linux
+            artifact: agentkib-linux-x64
 
     steps:
       - name: Check out source
@@ -52,25 +49,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install NSIS for Windows packages
-        if: matrix.name == 'Windows'
-        run: sudo apt-get update && sudo apt-get install -y nsis
-
-      - name: Build the React renderer
-        run: pnpm --filter @agentkib/desktop build:web
-
-      - name: Build the TypeScript backend
-        run: pnpm --filter @agentkib/desktop backend:build
-
-      - name: Stage MyGo quota resources
-        run: pnpm --filter @agentkib/desktop mygo:quota:stage
-
-      - name: Build MyGo packages
-        working-directory: apps/desktop
-        run: >-
-          go run github.com/egoist/mygo/cmd/mygo@v0.4.0 build
-          -platform "${{ matrix.platform }}"
-          ./mygo-host
+      - name: Build Wails preview binary
+        run: pnpm --filter @agentkib/desktop wails:build
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
@@ -78,11 +58,7 @@ jobs:
           name: ${{ matrix.artifact }}
           if-no-files-found: error
           path: |
-            apps/desktop/mygo-host/build/*/*.dmg
-            apps/desktop/mygo-host/build/*/*Setup*.exe
-            apps/desktop/mygo-host/build/*/*.deb
-            apps/desktop/mygo-host/build/*/*.tar.gz
-            apps/desktop/mygo-host/build/*/install.sh
+            apps/desktop/mygo-host/build/AgentKib*
 
   draft-release:
     name: Create draft release

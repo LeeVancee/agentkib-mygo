@@ -218,6 +218,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.31
         version: 1.170.31(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@wailsio/runtime':
+        specifier: 3.0.0-beta.28
+        version: 3.0.0-beta.28
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -245,9 +248,6 @@ importers:
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.2.8)
-      mygo-runtime:
-        specifier: 0.4.0
-        version: 0.4.0
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -2006,6 +2006,9 @@ packages:
   '@vitest/utils@4.1.11':
     resolution: {integrity: sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==}
 
+  '@wailsio/runtime@3.0.0-beta.28':
+    resolution: {integrity: sha512-IPl7WIsu0uQni9qgYAGm47G1WKNV/YFQannb/1r8orA81+wswJmCt/TS6GNb/U/coIRYyQ3ruO1FNMVwUVDvQQ==}
+
   '@xmldom/xmldom@0.8.15':
     resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
     engines: {node: '>=10.0.0'}
@@ -3675,9 +3678,6 @@ packages:
   multicast-dns@7.2.5:
     resolution: {integrity: sha512-2eznPJP8z2BFLX50tf0LuODrpINqP1RVIm/CObbTcBRITQgmC/TjcREF1NeTBzIcR5XO/ukWo+YHOjBbFwIupg==}
     hasBin: true
-
-  mygo-runtime@0.4.0:
-    resolution: {integrity: sha512-HRtGqqQI5xfEURjptdkJM89arot3UeOFwwHbUPTCO6eDLPD7zYfvVLMm70C7bBDjxrETw1On/7yp3rerPIZtVw==}
 
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
@@ -6294,6 +6294,8 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
+  '@wailsio/runtime@3.0.0-beta.28': {}
+
   '@xmldom/xmldom@0.8.15': {}
 
   abbrev@4.0.0: {}
@@ -8175,8 +8177,6 @@ snapshots:
     dependencies:
       dns-packet: 5.6.1
       thunky: 1.1.0
-
-  mygo-runtime@0.4.0: {}
 
   nanoid@3.3.18: {}
 

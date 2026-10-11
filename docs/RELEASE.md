@@ -45,7 +45,7 @@ publishing it. Re-running a failed tag build replaces files with the same
 names in that draft.
 
 The workflow deliberately leaves the release as a draft until signing,
-notarization, and update signing secrets are configured for MyGo.
+notarization, and update signing secrets are configured for Wails.
 
 ## Local package build
 
@@ -61,13 +61,9 @@ Build the supported targets explicitly with:
 cd apps/desktop
 pnpm build:web
 pnpm backend:build
-pnpm mygo:quota:stage
-go run github.com/egoist/mygo/cmd/mygo@v0.4.0 build \
-  -platform darwin/arm64,darwin/amd64,linux/amd64,windows/amd64 \
-  ./mygo-host
+pnpm wails:build
 ```
 
-MyGo currently uses the ad-hoc macOS signing identity in
-`apps/desktop/mygo-host/mygo.json`. Packages built by this workflow are
-functional preview packages; configure platform signing and notarization
-secrets before distributing them outside a controlled release review.
+Wails currently produces a functional preview binary for the host platform;
+installer packaging, platform signing, and notarization still need to be
+configured before distributing releases outside a controlled review.

@@ -48,9 +48,9 @@ for (const target of targets) {
       await cp(target.collector, path.join(outputRoot, "linux/CodexBarCLI"));
       await chmod(path.join(outputRoot, "linux/CodexBarCLI"), 0o755);
     }
-    process.stdout.write(`AgentKib MyGo quota: staged ${target.platform}.\n`);
+    process.stdout.write(`AgentKib Wails quota: staged ${target.platform}.\n`);
   } catch (error) {
     await rm(outputRoot, { recursive: true, force: true });
-    process.stdout.write(`AgentKib MyGo quota: skipped ${target.platform} (${error.code ?? error.message}).\n`);
+    process.stdout.write(`AgentKib Wails quota: skipped ${target.platform} (${error.code ?? error.message}).\n`);
   }
 }

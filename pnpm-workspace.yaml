@@ -16,4 +16,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - vite@8.3.4
-  - mygo-runtime@0.4.0
+  - '@wailsio/runtime@3.0.0-beta.28'

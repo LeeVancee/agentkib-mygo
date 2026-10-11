@@ -6,7 +6,7 @@ import type {
   InspectedWorkspace,
   NativeContext,
 } from "@agentkib/backend/migration";
-import { Backend, DesktopHost } from "@/mygo";
+import { Backend, DesktopHost } from "@/wails";
 
 type Rpc = <T = unknown>(method: string, params?: unknown) => Promise<T>;
 
@@ -14,7 +14,7 @@ const rpc: Rpc = <T = unknown>(method: string, params: unknown = {}) =>
   Backend.call(method, params) as Promise<T>;
 const unsubscribe = () => {};
 const unsupported = (name: string) =>
-  Promise.reject(new Error(`MyGo desktop method is not migrated yet: ${name}`));
+  Promise.reject(new Error(`Wails desktop method is not migrated yet: ${name}`));
 
 const events: DesktopApi["events"] = {
   onWindowActivity: () => unsubscribe,
@@ -135,7 +135,7 @@ const home: DesktopApi["home"] = {
   refreshStatus: () => Promise.resolve([]),
 };
 
-const mygoDesktopApi = {
+const wailsDesktopApi = {
   platform: "darwin" as NodeJS.Platform,
   events,
   runtime: {
@@ -272,6 +272,6 @@ const mygoDesktopApi = {
   ),
 } as unknown as DesktopApi;
 
-export function mygoDesktop(): DesktopApi {
-  return mygoDesktopApi;
+export function wailsDesktop(): DesktopApi {
+  return wailsDesktopApi;
 }

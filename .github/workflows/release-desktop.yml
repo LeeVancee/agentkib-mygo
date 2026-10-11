@@ -64,19 +64,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate desktop and MyGo versions
+      - name: Validate desktop version
         id: version
         shell: bash
         run: |
           set -euo pipefail
           package_version=$(node -p "JSON.parse(require('fs').readFileSync('apps/desktop/package.json')).version")
-          mygo_version=$(node -p "JSON.parse(require('fs').readFileSync('apps/desktop/mygo-host/mygo.json')).version")
           if [[ ! "$package_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
             echo "Invalid desktop version: $package_version" >&2
-            exit 1
-          fi
-          if [[ "$package_version" != "$mygo_version" ]]; then
-            echo "Desktop version $package_version does not match MyGo version $mygo_version" >&2
             exit 1
           fi
           echo "app_version=$package_version" >> "$GITHUB_OUTPUT"
@@ -147,34 +142,16 @@ jobs:
         include:
           - name: macOS
             arch: arm64
-            platform: darwin/arm64
             os: macos-14
             artifact: macos-arm64
-          - name: macOS
-            arch: x64
-            platform: darwin/amd64
-            os: macos-14
-            artifact: macos-x64
           - name: Windows
             arch: x64
-            platform: windows/amd64
-            os: ubuntu-24.04
+            os: windows-2022
             artifact: windows-x64
-          - name: Windows
-            arch: arm64-preview
-            platform: windows/arm64
-            os: ubuntu-24.04
-            artifact: windows-arm64-preview
           - name: Ubuntu
             arch: x64
-            platform: linux/amd64
             os: ubuntu-24.04
             artifact: linux-ubuntu-x64
-          - name: Ubuntu
-            arch: arm64-preview
-            platform: linux/arm64
-            os: ubuntu-24.04-arm
-            artifact: linux-ubuntu-arm64-preview
     steps:
       - name: Check out selected revision
         uses: actions/checkout@v4
@@ -189,10 +166,6 @@ jobs:
             build-essential binutils curl file pkg-config patchelf libssl-dev \
             libgtk-3-dev libfuse2 libglib2.0-bin desktop-file-utils \
             xdg-utils dbus-x11 xvfb
-
-      - name: Install NSIS for Windows packages
-        if: startsWith(matrix.platform, 'windows/')
-        run: sudo apt-get update && sudo apt-get install -y nsis
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -215,25 +188,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the React renderer
-        run: pnpm --filter @agentkib/desktop build:web
-
-      - name: Build the TypeScript backend
-        run: pnpm --filter @agentkib/desktop backend:build
-
-      - name: Stage MyGo quota resources
-        run: pnpm --filter @agentkib/desktop mygo:quota:stage
-
-      - name: Clean previous MyGo output
-        shell: bash
-        run: rm -rf apps/desktop/mygo-host/build
-
-      - name: Build MyGo package
-        working-directory: apps/desktop
-        run: >-
-          go run github.com/egoist/mygo/cmd/mygo@v0.4.0 build
-          -platform "${{ matrix.platform }}"
-          ./mygo-host
+      - name: Build Wails preview binary
+        run: pnpm --filter @agentkib/desktop wails:build
 
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
@@ -241,11 +197,7 @@ jobs:
           name: agentkib-desktop-${{ matrix.artifact }}
           if-no-files-found: error
           path: |
-            apps/desktop/mygo-host/build/*/*.dmg
-            apps/desktop/mygo-host/build/*/*Setup*.exe
-            apps/desktop/mygo-host/build/*/*.deb
-            apps/desktop/mygo-host/build/*/*.tar.gz
-            apps/desktop/mygo-host/build/*/install.sh
+            apps/desktop/mygo-host/build/AgentKib*
 
   fedora-x64:
     name: Build Fedora x64 RPM
@@ -289,26 +241,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build MyGo Linux package
+      - name: Build Wails Linux preview binary
         shell: bash
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          pnpm --filter @agentkib/desktop build:web
-          pnpm --filter @agentkib/desktop backend:build
-          pnpm --filter @agentkib/desktop mygo:quota:stage
-          rm -rf apps/desktop/mygo-host/build
-          cd apps/desktop
-          go run github.com/egoist/mygo/cmd/mygo@v0.4.0 build -platform linux/amd64 ./mygo-host
+          pnpm --filter @agentkib/desktop wails:build
 
       - name: Build RPM package
         shell: bash
         run: |
           set -euo pipefail
-          source_dir="$PWD/apps/desktop/mygo-host/build/linux-amd64"
+          source_dir="$PWD/apps/desktop/mygo-host/build"
           rpm_root="$PWD/rpmroot"
           release_dir="$PWD/dist/desktop-release"
-          test -x "$source_dir/agentkib"
+          test -x "$source_dir/AgentKib"
           rm -rf "$rpm_root" "$release_dir"
           mkdir -p "$rpm_root"/{BUILD,RPMS,SOURCES,SPECS,SRPMS} "$release_dir"
           cat > "$rpm_root/SPECS/agentkib.spec" <<EOF_SPEC
@@ -326,11 +273,16 @@ jobs:
           Discover, diagnose, and synchronize coding agent configuration.
           %install
           mkdir -p %{buildroot}/opt/agentkib
-          cp -a $source_dir/. %{buildroot}/opt/agentkib/
+          install -m 0755 $source_dir/AgentKib %{buildroot}/opt/agentkib/agentkib
           mkdir -p %{buildroot}/usr/bin %{buildroot}/usr/share/applications
           ln -s /opt/agentkib/agentkib %{buildroot}/usr/bin/agentkib
-          cp %{buildroot}/opt/agentkib/agentkib.desktop %{buildroot}/usr/share/applications/agentkib.desktop
-          sed -i 's|^Exec=agentkib|Exec=/usr/bin/agentkib|' %{buildroot}/usr/share/applications/agentkib.desktop
+          cat > %{buildroot}/usr/share/applications/agentkib.desktop <<EOF_DESKTOP
+          [Desktop Entry]
+          Name=AgentKib
+          Exec=/usr/bin/agentkib
+          Type=Application
+          Categories=Development;
+          EOF_DESKTOP
           %files
           /opt/agentkib
           /usr/bin/agentkib
