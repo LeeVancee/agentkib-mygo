@@ -312,6 +312,10 @@ jobs:
           rm -rf "$rpm_root" "$release_dir"
           mkdir -p "$rpm_root"/{BUILD,RPMS,SOURCES,SPECS,SRPMS} "$release_dir"
           cat > "$rpm_root/SPECS/agentkib.spec" <<EOF_SPEC
+          %global __brp_strip %{nil}
+          %global __brp_strip_comment_note %{nil}
+          %global __brp_strip_lto %{nil}
+          %global __brp_strip_static_archive %{nil}
           Name: agentkib
           Version: $APP_VERSION
           Release: 1%{?dist}
