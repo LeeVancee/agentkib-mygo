@@ -291,6 +291,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           pnpm --filter @agentkib/desktop build:web
           pnpm --filter @agentkib/desktop backend:build
           pnpm --filter @agentkib/desktop mygo:quota:stage
